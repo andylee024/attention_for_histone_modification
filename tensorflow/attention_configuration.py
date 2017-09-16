@@ -1,6 +1,4 @@
-"""
-Configuration objects for attention model.
-"""
+"""Configuration objects for attention model."""
 
 import tensorflow as tf
 
@@ -45,15 +43,15 @@ class AttentionConfiguration(object):
         self.sequence_length = sequence_length
         self.vocabulary_size = vocabulary_size
         self.prediction_classes = prediction_classes
-        self.number_annotation_vectors = number_of_annotation_vectors
+        self.number_of_annotation_vectors = number_of_annotation_vectors
         self.annotation_vector_dimension = annotation_vector_dimension
         self.hidden_state_dimension = hidden_state_dimension
 
         # Convenience accessors for backwards compatibility
-        self.N = batch_size
-        self.T = sequence_length
-        self.V = vocabulary_size
-        self.C = prediction_classes
-        self.L = number_of_annotation_vectors
-        self.D = annotation_vector_dimension
-        self.H = hidden_state_dimension
+        # self.N = batch_size
+        # self.T = sequence_length
+        # self.V = vocabulary_size
+        # self.C = prediction_classes
+        # self.L = number_of_annotation_vectors
+        # self.D = annotation_vector_dimension
+        # self.H = hidden_state_dimension

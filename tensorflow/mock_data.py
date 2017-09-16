@@ -8,13 +8,24 @@ import numpy as np
 
 def create_dummy_training_example(attention_config):
     """Create a single training example with dummy data according to attention configuration object."""
-    annotation_vector_size = (attention_config.L, attention_config.D)
-    dummy_sequence = np.random.randint(low=0, high=attention_config.V, size=attention_config.T)
-    dummy_sequence = convert_to_one_hot(labels=dummy_sequence, number_of_classes=attention_config.V)
-    dummy_label = np.random.randint(low=0, high=attention_config.C, size=1)
+
+    annotation_vector_size = (attention_config.number_of_annotation_vectors,
+                              attention_config.annotation_vector_dimension)
+
+    dummy_sequence = np.random.randint(low=0,
+                                       high=attention_config.vocabulary_size,
+                                       size=attention_config.sequence_length)
+
+    dummy_sequence_one_hot = convert_to_one_hot(labels=dummy_sequence,
+                                                number_of_classes=attention_config.vocabulary_size)
+
+    dummy_label = np.random.randint(low=0,
+                                    high=attention_config.prediction_classes,
+                                    size=1)
+
     dummy_annotation_vectors = np.random.normal(loc=0.0, scale=1.0, size=annotation_vector_size)
 
-    return TrainingExample(sequence=dummy_sequence,
+    return TrainingExample(sequence=dummy_sequence_one_hot,
                            annotation_vectors=dummy_annotation_vectors,
                            label=dummy_label)
 
@@ -25,7 +36,7 @@ def create_dummy_batch_data(attention_config):
     ;return:
         Tensor representation of training examples.
     """
-    training_examples = [create_dummy_training_example(attention_config) for _ in xrange(attention_config.N)]
+    training_examples = [create_dummy_training_example(attention_config) for _ in xrange(attention_config.batch_size)]
     return convert_training_examples_to_tensor(training_examples)
 
 # ----------------------------------------------------------------------------------------------------------------------

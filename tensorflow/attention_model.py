@@ -23,13 +23,13 @@ class AttentionModel(object):
             Configuration object for specifying weight and bias initialization.
         """
         self._validate_attention_configuration(attention_config)
-        self._validate_attention_configuration(learning_config)
+        self._validate_learning_configuration(learning_config)
 
         self._model_config = attention_config
         self._learning_config = learning_config
 
         # initialize LSTM for attention model
-        self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_units_dimension)
+        self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
 
     @staticmethod
     def _validate_attention_configuration(configuration):
@@ -53,7 +53,7 @@ class AttentionModel(object):
                           self._model_config.annotation_vector_dimension)
 
         sequences_shape = (self._model_config.batch_size,
-                           self._model_config.sequence_size,
+                           self._model_config.sequence_length,
                            self._model_config.vocabulary_size)
 
         labels_shape = self._model_config.batch_size
@@ -98,7 +98,7 @@ class AttentionModel(object):
                                                       learning_config=self._learning_config)
 
         # Get hidden states for each sequence in batch (N x H)
-        for t in range(self._model_config.sequence_size):
+        for t in range(self._model_config.sequence_length):
             with tf.variable_scope('update_lstm', reuse=(t != 0)):
                 _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
                                                                  state=[memory_state, hidden_state])
