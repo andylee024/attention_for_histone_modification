@@ -2,65 +2,57 @@
 # Attention for Histone Modification
 # 
 
+import argparse
 import numpy as np
+import pickle
+import sys
 
 from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
 from attention_for_histone_modification.libs.preprocessing.ml_types import AttentionTrainingExample, AttentionDataset
 
-def extract_sequences_from_deepsea_dataset(deepsea_dataset):
-    """Return list of sequences from deepsea dataset."""
-    return (np.expand_dims(np.transpose(s), axis=0) for s in deepsea_dataset['testxdata'][:10])
 
-def extract_labels_from_deepsea_dataset(deepsea_dataset):
-    """Return list of labels from deepsea dataset."""
-    return (label for label in deepsea_dataset['testdata'][:10])
-
-def convert_to_attention_dataset(deepsea_dataset, extractor):
+def convert_to_attention_dataset(sequences, labels, extractor):
     """Extracts data from deepsea dataset.
 
-    :param data_dictionary:
-        Python dictionary containing deepsea data with the following attributes.
-            'testxdata' : Numpy array (batch_size, vocabulary_dimension, sequence_length)
-            'testdata'  : Numpy array (batch_size, label_classes)
+    :param sequences:
+        Numpy array containing sequence data of shape (number_examples, sequence_length, vocabulary_size)
+    :param labels:
+        Numpy array containing labels of shape (number_examples, label_dimension)
+    :param extractor:
+        AnnotationExtractor object for extracting annotation vectors from sequences.
     :return:
         List of training examples.
     """
-    sequences = list(extract_sequences_from_deepsea_dataset(deepsea_dataset))
-    labels = list(extract_labels_from_deepsea_dataset(deepsea_dataset))
-    annotations = [extractor.extract_annotation(s) for s in sequences]
-    
-    training_examples = (AttentionTrainingExample(sequence=s, label=l, annotation_vector=a) for (s, l, a) in zip(sequences, labels, annotations))
-    return AttentionDataset(list(training_examples))
+    # validate sequences and labels are paired correctly
+    assert sequences.shape[0] == labels.shape[0]
+
+    # construct training examples
+    training_examples = [AttentionTrainingExample(sequence=s, 
+                                                  label=l, 
+                                                  annotation_vector=extractor.extract_annotation(np.expand_dims(s, axis=0)))
+                        for (s,l) in zip(sequences, labels)]
+    return AttentionDataset(training_examples)
 
 
-def main():
+def main(args):
+    extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights), layer_name=args.layer)
+    dataset = convert_to_attention_dataset(sequences=np.load(args.sequences), labels=np.load(args.labels), extractor=extractor)
+    pickle.dump(dataset, os.path.join(args.directory, "{}.pkl".format(args.name)))
 
-    import os
-    import scipy.io
-
-    # initialize dataset
-    deepsea_data_path = os.path.join("/Users/andy/Projects/bio_startup/research/deepsea_data", "test.mat")
-    deepsea_data = scipy.io.loadmat(deepsea_data_path)
-    deepsea_data['testdata'] = deepsea_data['testdata'][:10]
-    deepsea_data['testxdata'] = deepsea_data['testxdata'][:10]
-
-    print deepsea_data['testdata'].shape
-    print deepsea_data['testxdata'].shape
-    
-    # initialize extractor
-    danq_weights = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
-    danq_model = get_trained_danq_model(danq_weights)
-    extractor = AnnotationExtractor(model=danq_model, layer_name="dense_1")
-
-    # test convert tool
-    dataset = convert_to_attention_dataset(deepsea_data, extractor)
-    assert isinstance(dataset, AttentionDataset)
-    assert len(dataset.training_examples) == 10.0
+    print "total_examples: {}".format(len(dataset.training_examples))
+    print "sequence.shape: {}".format(dataset.training_examples[0].sequence.shape)
+    print "label.shape: {}".format(dataset.training_examples[0].label.shape)
+    print "annotation_vector.shape: {}".format(dataset.training_examples[0].annotation_vector.shape)
     print "dataset generation passing ..."
 
 if __name__ == "__main__":
-    main()
-    
-
-    
+    parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
+    parser.add_argument("-n", "--name", type=str, required=True, help="name of dataset")
+    parser.add_argument("-w", "--weights", type=str, required=True, help="path to DANQ keras weights.")
+    parser.add_argument("-l", "--layer", type=str, required=True, help="name of layer from DANQ for which to extract annotation vectors.")
+    parser.add_argument("-x", "--sequences", type=str, help="Path to .npy file containing sequences (X-data).")
+    parser.add_argument("-y", "--labels", type=str, help="Path to .npy file containing labels (Y-data).")
+    parser.add_argument("-d", "--directory", type=str, required=True, help="Path to output directory for saving datasets.")
+    args = parser.parse_args(sys.argv[1:])
+    main(args)
 
