@@ -36,18 +36,15 @@ def convert_to_attention_dataset(sequences, labels, extractor):
 
 
 def main(args):
+    # construct dataset
     extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
                                     layer_name=args.layer)
     dataset = convert_to_attention_dataset(sequences=np.load(args.sequences),
                                            labels=np.load(args.labels),
                                            extractor=extractor)
-    pickle.dump(dataset, os.path.join(args.directory, "{}.pkl".format(args.name)))
-
-    print "total_examples: {}".format(len(dataset.training_examples))
-    print "sequence.shape: {}".format(dataset.training_examples[0].sequence.shape)
-    print "label.shape: {}".format(dataset.training_examples[0].label.shape)
-    print "annotation_vector.shape: {}".format(dataset.training_examples[0].annotation_vector.shape)
-    print "dataset generation passing ..."
+    # write dataset
+    with open(os.path.join(args.directory, "{}.pkl".format(args.name)), 'w') as f:
+        pickle.dump(dataset, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
