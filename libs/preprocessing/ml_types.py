@@ -30,5 +30,5 @@ class AttentionDataset(object):
     def __init__(self, training_examples):
         """Initialize dataset."""
         assert all((isinstance(te, AttentionTrainingExample) for te in training_examples))
-        self._training_examples = training_examples
+        self.training_examples = training_examples
 

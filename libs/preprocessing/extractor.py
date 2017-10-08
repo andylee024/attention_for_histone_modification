@@ -11,7 +11,7 @@ from keras.optimizers import RMSprop
 
 import numpy as np
 
-class annotation_extractor(object):
+class AnnotationExtractor(object):
     """Annotation extractor for attention models."""
 
     def __init__(self, model, layer_name):
@@ -24,7 +24,7 @@ class annotation_extractor(object):
         """
         self._model = model
         self._layer_name = layer_name
-        self._extractor = Model(inputs=model.input, outputs=model.get_layer("dense_1").output)
+        self._extractor = Model(inputs=self._model.input, outputs=self._model.get_layer(layer_name).output)
 
     def extract_annotation(self, sequence):
         """Return annotation vector corresponding to sequence.
@@ -91,7 +91,7 @@ def _test_extractor():
     # initialize extractor
     danq_weights = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
     danq_model = get_trained_danq_model(danq_weights)
-    extractor = annotation_extractor(model=danq_model, layer_name="dense_1")
+    extractor = AnnotationExtractor(model=danq_model, layer_name="dense_3")
 
     # extract annotation vector
     dummy_training_sequence = np.zeros(shape=(1, 1000, 4))
