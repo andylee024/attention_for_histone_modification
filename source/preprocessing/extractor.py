@@ -11,7 +11,6 @@ from keras.optimizers import RMSprop
 
 import numpy as np
 
-
 class annotation_extractor(object):
     """Annotation extractor for attention models."""
 
@@ -86,7 +85,7 @@ def _build_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brn
     return model
 
 
-def test_extractor():
+def _test_extractor():
     """Simple test to test initialization of danq model."""
 
     # initialize extractor
@@ -103,5 +102,5 @@ def test_extractor():
     print "extraction test passed..."
 
 if __name__ == "__main__":
-    test_extractor()
+    _test_extractor()
     
