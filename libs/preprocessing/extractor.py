@@ -11,6 +11,7 @@ from keras.optimizers import RMSprop
 
 import numpy as np
 
+
 class AnnotationExtractor(object):
     """Annotation extractor for attention models."""
 
@@ -89,7 +90,8 @@ def _test_extractor():
     """Simple test to test initialization of danq model."""
 
     # initialize extractor
-    danq_weights = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
+    danq_weights = \
+        '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
     danq_model = get_trained_danq_model(danq_weights)
     extractor = AnnotationExtractor(model=danq_model, layer_name="dense_3")
 
@@ -103,4 +105,4 @@ def _test_extractor():
 
 if __name__ == "__main__":
     _test_extractor()
-    
+

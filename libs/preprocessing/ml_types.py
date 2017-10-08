@@ -2,6 +2,7 @@
 # Attention for Histone Modification
 # 
 
+
 class AttentionTrainingExample(object):
     """Training example for attention models."""
 

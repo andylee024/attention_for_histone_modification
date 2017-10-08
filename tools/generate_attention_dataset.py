@@ -4,6 +4,7 @@
 
 import argparse
 import numpy as np
+import os
 import pickle
 import sys
 
@@ -27,16 +28,19 @@ def convert_to_attention_dataset(sequences, labels, extractor):
     assert sequences.shape[0] == labels.shape[0]
 
     # construct training examples
-    training_examples = [AttentionTrainingExample(sequence=s, 
-                                                  label=l, 
-                                                  annotation_vector=extractor.extract_annotation(np.expand_dims(s, axis=0)))
-                        for (s,l) in zip(sequences, labels)]
+    training_examples = [
+        AttentionTrainingExample(sequence=s, label=l,
+                                 annotation_vector=extractor.extract_annotation(np.expand_dims(s, axis=0)))
+        for (s, l) in zip(sequences, labels)]
     return AttentionDataset(training_examples)
 
 
 def main(args):
-    extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights), layer_name=args.layer)
-    dataset = convert_to_attention_dataset(sequences=np.load(args.sequences), labels=np.load(args.labels), extractor=extractor)
+    extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
+                                    layer_name=args.layer)
+    dataset = convert_to_attention_dataset(sequences=np.load(args.sequences),
+                                           labels=np.load(args.labels),
+                                           extractor=extractor)
     pickle.dump(dataset, os.path.join(args.directory, "{}.pkl".format(args.name)))
 
     print "total_examples: {}".format(len(dataset.training_examples))
@@ -47,12 +51,18 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
-    parser.add_argument("-n", "--name", type=str, required=True, help="name of dataset")
-    parser.add_argument("-w", "--weights", type=str, required=True, help="path to DANQ keras weights.")
-    parser.add_argument("-l", "--layer", type=str, required=True, help="name of layer from DANQ for which to extract annotation vectors.")
-    parser.add_argument("-x", "--sequences", type=str, help="Path to .npy file containing sequences (X-data).")
-    parser.add_argument("-y", "--labels", type=str, help="Path to .npy file containing labels (Y-data).")
-    parser.add_argument("-d", "--directory", type=str, required=True, help="Path to output directory for saving datasets.")
+    parser.add_argument("-n", "--name", type=str, required=True,
+                        help="name of dataset")
+    parser.add_argument("-w", "--weights", type=str, required=True,
+                        help="path to DANQ keras weights.")
+    parser.add_argument("-l", "--layer", type=str, required=True,
+                        help="name of layer from DANQ for which to extract annotation vectors.")
+    parser.add_argument("-x", "--sequences", type=str,
+                        help="Path to .npy file containing sequences (X-data).")
+    parser.add_argument("-y", "--labels", type=str,
+                        help="Path to .npy file containing labels (Y-data).")
+    parser.add_argument("-d", "--directory", type=str, required=True,
+                        help="Path to output directory for saving datasets.")
     args = parser.parse_args(sys.argv[1:])
     main(args)
 

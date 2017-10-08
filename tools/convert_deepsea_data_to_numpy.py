@@ -6,22 +6,19 @@
 
 import argparse 
 import collections
+import h5py
 import numpy as np
 import os
 import scipy.io
 import sys
 
-# Specify dimensions for converting matrix shape for X data.
-# 
-# train: (sequence_length, vocabulary_size, batch_size) -> (batch_size, sequence_length, vocabulary_size)
-# test: (batch_size, vocabulary_size, sequence_length) -> (batch_size, sequence_length, vocabulary_size)
-# validation: (batch_size, vocabulary_size, sequence_length) -> (batch_size, sequence_length, vocabulary_size)
-#
+# Specify dimensions for converting matrix shape.
 TRANSPOSE_AXES_X = {'train': (2, 0, 1), 'test': (0, 2, 1), 'validation': (0, 2, 1)}
-TRANSPOSE_AXES_Y = {'train': (1,0), 'test': (0,1), 'validation': (0,1)}
+TRANSPOSE_AXES_Y = {'train': (1, 0), 'test': (0, 1), 'validation': (0, 1)}
 
 # data type for holding ml data with split label
 ml_datum = collections.namedtuple(typename='ml_datum', field_names=['x', 'y', 'split'])
+
 
 def _validate_paths(data_paths):
     """Validate that data paths exist in system.
@@ -32,6 +29,7 @@ def _validate_paths(data_paths):
     for (split, path) in data_paths.iteritems():
         if not os.path.isfile(path):
             raise OSError("Data file {} does not exist!".format(path))
+
 
 def _get_valid_data_paths(args):
     """Return all valid data paths for deepsea data extraction.
@@ -44,6 +42,7 @@ def _get_valid_data_paths(args):
    
     _validate_paths(filtered_data_paths)
     return filtered_data_paths
+
 
 def _get_raw_deepsea_data(split, path):
     """Parse data paths and get raw deepsea data.
@@ -61,8 +60,11 @@ def _get_raw_deepsea_data(split, path):
         data = scipy.io.loadmat(path)
     elif split == "valid":
         data = scipy.io.loadmat(path)
+    else:
+        raise NotImplementedError("split type not recognized!")
 
     return ml_datum(x=data[x_data_key], y=data[y_data_key], split=split)
+
 
 def _process_deepsea_ml_datum(mld):
     """Convert dimensions of ML datums.
@@ -79,16 +81,18 @@ def _process_deepsea_ml_datum(mld):
     print "converted {0}_Y.shape {1} -> {2}".format(mld.split, mld.y.shape, processed_y.shape)
     return ml_datum(x=processed_x, y=processed_y, split=mld.split)
 
+
 def _save_ml_datum(mld, directory):
     """Save numpy matrices of ml datum."""
-    destination_X = os.path.join(directory, "deepsea_{}_X.npy".format(mld.split))
-    destination_Y = os.path.join(directory, "deepsea_{}_Y.npy".format(mld.split))
+    destination_x = os.path.join(directory, "deepsea_{}_X.npy".format(mld.split))
+    destination_y = os.path.join(directory, "deepsea_{}_Y.npy".format(mld.split))
 
-    np.save(destination_X, mld.x)
-    print "saved...{}".format(destination_X)
+    np.save(destination_x, mld.x)
+    print "saved...{}".format(destination_x)
 
-    np.save(destination_Y, mld.y)
-    print "saved...{}".format(destination_Y)
+    np.save(destination_y, mld.y)
+    print "saved...{}".format(destination_y)
+
 
 def main(args):
     data_paths = _get_valid_data_paths(args)
@@ -96,6 +100,7 @@ def main(args):
     ml_data = (_process_deepsea_ml_datum(mld) for mld in deepsea_ml_data)
     for mld in ml_data:
         _save_ml_datum(mld, args.directory)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
