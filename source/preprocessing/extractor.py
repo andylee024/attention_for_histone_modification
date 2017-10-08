@@ -11,11 +11,49 @@ from keras.optimizers import RMSprop
 
 import numpy as np
 
-def get_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brnnDropout=0.5, learningRate=0.001):
-    """Return canonical danq model with default parameters.
 
-    :return: danq model in Keras
+class annotation_extractor(object):
+    """Annotation extractor for attention models."""
+
+    def __init__(self, model, layer_name):
+        """Initialize extractor.
+
+        :param model:
+            Keras model used to extract annotation vectors.
+        :param layer_name:
+            Str. Name of layer for which to extract convolutional layers.
+        """
+        self._model = model
+        self._layer_name = layer_name
+        self._extractor = Model(inputs=model.input, outputs=model.get_layer("dense_1").output)
+
+    def extract_annotation(self, sequence):
+        """Return annotation vector corresponding to sequence.
+        
+        :param sequence:
+            Numpy array representing genetic sequence.
+        :return:
+            Feature corresponding to sequence.
+        """
+        annotation = self._extractor.predict(sequence)
+        return annotation.flatten()
+
+
+def get_trained_danq_model(danq_weights_path):
+    """Get trained danq model by initializing with weights.
+
+    :param danq_weights_path: 
+        HDF5 weights file in Keras with which to initialize DANQ model.
+    :return:
+        DANQ model with weights.
     """
+    danq_model = _build_danq_model()
+    danq_model.load_weights(danq_weights_path)
+    return danq_model
+
+
+def _build_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brnnDropout=0.5, learningRate=0.001):
+    """Build danq model with specified parameters."""
 
     # specify layers
     conv_layer = Conv1D(input_shape = (1000, 4),
@@ -24,6 +62,7 @@ def get_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brnnDr
                         activation="relu",
                         kernel_size=26,
                         filters=numConvFilters)
+
     brnn = Bidirectional(LSTM(320, return_sequences=True))
     
     # specify optimizer
@@ -46,33 +85,23 @@ def get_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brnnDr
     model.compile(loss='binary_crossentropy', optimizer=optim, metrics=['accuracy'])
     return model
 
-def get_trained_danq_model(danq_weights_path):
-    """Get trained danq model by initializing with weights.
 
-    :param danq_weights_path: 
-        HDF5 weights file in Keras with which to initialize DANQ model.
-    :return:
-        DANQ model with weights.
-    """
-    danq_model = get_danq_model()
-    danq_model.load_weights(danq_weights_path)
-    return danq_model
-
-def test_danq():
+def test_extractor():
     """Simple test to test initialization of danq model."""
+
+    # initialize extractor
     danq_weights = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
     danq_model = get_trained_danq_model(danq_weights)
-    print danq_model.summary()
+    extractor = annotation_extractor(model=danq_model, layer_name="dense_1")
 
+    # extract annotation vector
     dummy_training_sequence = np.zeros(shape=(1, 1000, 4))
+    annotation_vector = extractor.extract_annotation(dummy_training_sequence)
 
-    annotation_vector_model = Model(inputs=danq_model.input,
-                                    outputs=danq_model.get_layer("dense_1").output)
-
-    annotation_vector = annotation_vector_model.predict(dummy_training_sequence).flatten()
+    # test 
     assert annotation_vector.size == 925
-    print "DANQ test passed..."
+    print "extraction test passed..."
 
 if __name__ == "__main__":
-    test_danq()
+    test_extractor()
     
