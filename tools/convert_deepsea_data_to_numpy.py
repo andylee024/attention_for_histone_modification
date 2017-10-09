@@ -13,8 +13,8 @@ import scipy.io
 import sys
 
 # Specify dimensions for converting matrix shape.
-TRANSPOSE_AXES_X = {'train': (2, 0, 1), 'test': (0, 2, 1), 'validation': (0, 2, 1)}
-TRANSPOSE_AXES_Y = {'train': (1, 0), 'test': (0, 1), 'validation': (0, 1)}
+TRANSPOSE_AXES_X = {'train': (2, 0, 1), 'test': (0, 2, 1), 'valid': (0, 2, 1)}
+TRANSPOSE_AXES_Y = {'train': (1, 0), 'test': (0, 1), 'valid': (0, 1)}
 
 # data type for holding ml data with split label
 ml_datum = collections.namedtuple(typename='ml_datum', field_names=['x', 'y', 'split'])
@@ -37,7 +37,7 @@ def _get_valid_data_paths(args):
     :return 
         Python dictionary, where key is split name and value is data path.
     """
-    all_data_paths = {'train': args.train, 'test': args.test, 'validation': args.validation}
+    all_data_paths = {'train': args.train, 'test': args.test, 'valid': args.validation}
     filtered_data_paths = {split: path for (split, path) in all_data_paths.iteritems() if path is not None}
    
     _validate_paths(filtered_data_paths)
