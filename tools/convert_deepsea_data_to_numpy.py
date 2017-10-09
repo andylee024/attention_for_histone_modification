@@ -84,8 +84,8 @@ def _process_deepsea_ml_datum(mld):
 
 def _save_ml_datum(mld, directory):
     """Save numpy matrices of ml datum."""
-    destination_x = os.path.join(directory, "deepsea_{}_X.npy".format(mld.split))
-    destination_y = os.path.join(directory, "deepsea_{}_Y.npy".format(mld.split))
+    destination_x = os.path.join(directory, "deepsea_{}_x.npy".format(mld.split))
+    destination_y = os.path.join(directory, "deepsea_{}_y.npy".format(mld.split))
 
     np.save(destination_x, mld.x)
     print "saved...{}".format(destination_x)
