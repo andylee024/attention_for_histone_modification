@@ -93,7 +93,7 @@ def _test_extractor():
     danq_weights = \
         '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
     danq_model = get_trained_danq_model(danq_weights)
-    extractor = AnnotationExtractor(model=danq_model, layer_name="dense_3")
+    extractor = AnnotationExtractor(model=danq_model, layer_name="dense_1")
 
     # extract annotation vector
     dummy_training_sequence = np.zeros(shape=(1, 1000, 4))
