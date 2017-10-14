@@ -17,7 +17,7 @@ from attention_for_histone_modification.libs.utilities.profile import time_funct
 
 def main(args):
 
-    dataset_path = _get_dataset_path(arg.directory, args.name)
+    dataset_path = _get_dataset_path(args.directory, args.name)
 
     if args.dry_run:
         print "Dry run... not actually creating dataset."
@@ -43,9 +43,14 @@ def main(args):
         print "saved dataset {}".format(dataset_path)
 
 
-def _get_dataset_path(args.directory, args.name):
-    """Return dataset path."""
-    return os.path.join(args.directory, "{}.pkl".format(args.name))
+def _get_dataset_path(directory, dataset_name):
+    """Return dataset path.
+    
+    :param directory: Path to directory where datset is stored.
+    :param dataset_name: name of dataset
+    :return: Path to saved dataset.
+    """
+    return os.path.join(directory, "{}.pkl".format(dataset_name))
 
 
 @time_function
