@@ -38,6 +38,18 @@ class AnnotationExtractor(object):
         annotation = self._extractor.predict(sequence)
         return annotation.flatten()
 
+    def extract_annotation_batch(self, sequence_batch):
+        """Return annotation vectors corresponding to batch of sequences.
+        
+        :param sequence_batch:
+            Numpy array representing genetic sequence batch.
+            Shape: (batch_size, sequence_length, vocabulary_size)
+        :return:
+            Feature corresponding to sequence.
+            Shape: (batch_size, annotation_vector_size) 
+        """
+        return self._extractor.predict_on_batch(sequence_batch)
+
 
 def get_trained_danq_model(danq_weights_path):
     """Get trained danq model by initializing with weights.
@@ -84,25 +96,4 @@ def _build_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brn
     # compile model
     model.compile(loss='binary_crossentropy', optimizer=optim, metrics=['accuracy'])
     return model
-
-
-def _test_extractor():
-    """Simple test to test initialization of danq model."""
-
-    # initialize extractor
-    danq_weights = \
-        '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/experimental/danq_weights.hdf5'
-    danq_model = get_trained_danq_model(danq_weights)
-    extractor = AnnotationExtractor(model=danq_model, layer_name="dense_1")
-
-    # extract annotation vector
-    dummy_training_sequence = np.zeros(shape=(1, 1000, 4))
-    annotation_vector = extractor.extract_annotation(dummy_training_sequence)
-
-    # test 
-    assert annotation_vector.size == 925
-    print "extraction test passed..."
-
-if __name__ == "__main__":
-    _test_extractor()
 
