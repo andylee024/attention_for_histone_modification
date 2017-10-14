@@ -1,6 +1,6 @@
 #
 # Attention for Histone Modification
-# 
+#
 
 import argparse
 import numpy as np
@@ -14,7 +14,15 @@ from attention_for_histone_modification.libs.preprocessing.extractor import Anno
 from attention_for_histone_modification.libs.preprocessing.ml_types import AttentionTrainingExample, AttentionDataset
 from attention_for_histone_modification.libs.utilities.profile import time_function
 
+
 def main(args):
+
+    dataset_path = _get_dataset_path(arg.directory, args.name)
+
+    if args.dry_run:
+        print "Dry run... not actually creating dataset."
+        print "dataset path: {}".format(dataset_path)
+        return
 
     print "Starting dataset generation... \n"
 
@@ -24,22 +32,26 @@ def main(args):
     sequences = np.load(args.sequences)
     labels = np.load(args.labels)
     annotations = _get_annotations(sequences, extractor)
-   
+
     # step 2 - create dataset
     dataset = _convert_to_attention_dataset(sequences=sequences,
                                             labels=labels,
                                             annotations=annotations)
     # write dataset
-    dataset_path = os.path.join(args.directory, "{}.pkl".format(args.name))
     with open(dataset_path, 'w') as f:
         pickle.dump(dataset, f)
         print "saved dataset {}".format(dataset_path)
 
 
+def _get_dataset_path(args.directory, args.name):
+    """Return dataset path."""
+    return os.path.join(args.directory, "{}.pkl".format(args.name))
+
+
 @time_function
 def _get_annotations(sequences, extractor):
     """Get annotations corresponding to sequences.
-    
+
     :param sequences:
         Numpy array containing sequence data of shape (number_examples, sequence_length, vocabulary_size)
     :param extractor:
@@ -47,7 +59,7 @@ def _get_annotations(sequences, extractor):
     :return annotations:
         Numpy array containing annotations of shape (number_examples, annotation_dimension)
     """
-    print "extracting annotations for {} sequences...".format(sequences.shape[0]) 
+    print "extracting annotations for {} sequences...".format(sequences.shape[0])
     return extractor.extract_annotation_batch(sequences)
 
 
@@ -63,19 +75,22 @@ def _convert_to_attention_dataset(sequences, labels, annotations):
     :return:
         List of training examples.
     """
-    # validate sequences and labels and annotations have correct number of examples
+    # validate sequences and labels and annotations have correct number of
+    # examples
     assert all(array.shape for array in (sequences, labels, annotations))
 
     # construct training examples
     print "generating training examples progress..."
     training_examples = [
-            AttentionTrainingExample(sequence=s, label=l, annotation=a) 
-            for (s, l, a) in tqdm(zip(sequences, labels, annotations))]
+        AttentionTrainingExample(sequence=s, label=l, annotation=a)
+        for (s, l, a) in tqdm(zip(sequences, labels, annotations))]
 
     return AttentionDataset(training_examples)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
+    parser = argparse.ArgumentParser(
+        description="Command line tool for extracting data from deepsea dataset.")
     parser.add_argument("-n", "--name", type=str, required=True,
                         help="name of dataset")
     parser.add_argument("-w", "--weights", type=str, required=True,
@@ -88,5 +103,9 @@ if __name__ == "__main__":
                         help="Path to .npy file containing labels (Y-data).")
     parser.add_argument("-d", "--directory", type=str, required=True,
                         help="Path to output directory for saving datasets.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="If flag set, do not create dataset just return path.")
     args = parser.parse_args(sys.argv[1:])
     main(args)
