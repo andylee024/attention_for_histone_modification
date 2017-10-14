@@ -7,44 +7,61 @@ import numpy as np
 import os
 import pickle
 import sys
+from tqdm import tqdm
 
 from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
 from attention_for_histone_modification.libs.preprocessing.ml_types import AttentionTrainingExample, AttentionDataset
 
+def main(args):
+    extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
+                                    layer_name=args.layer)
+    sequences = np.load(args.sequences)
+    labels = np.load(arg.labels)
+    annotations = _get_annotations(sequeces, extractor)
 
-def convert_to_attention_dataset(sequences, labels, extractor):
+    dataset = _convert_to_attention_dataset(sequences=sequences,
+                                            labels=labels,
+                                            annotations=annotations)
+    # write dataset
+    with open(os.path.join(args.directory, "{}.pkl".format(args.name)), 'w') as f:
+        pickle.dump(dataset, f)
+
+
+def _get_annotations(sequences, extractor):
+    """Get annotations corresponding to sequences.
+    
+    :param sequences:
+        Numpy array containing sequence data of shape (number_examples, sequence_length, vocabulary_size)
+    :param extractor:
+        Extractor object to get annotations from sequences.
+    :return annotations:
+        Numpy array containing annotations of shape (number_examples, annotation_dimension)
+    """
+    return extractor.extract_annotation_batch(sequences)
+
+
+def _convert_to_attention_dataset(sequences, labels, annotations):
     """Extracts data from deepsea dataset.
 
     :param sequences:
         Numpy array containing sequence data of shape (number_examples, sequence_length, vocabulary_size)
     :param labels:
         Numpy array containing labels of shape (number_examples, label_dimension)
-    :param extractor:
-        AnnotationExtractor object for extracting annotation vectors from sequences.
+    :param annotations:
+        Numpy array containing annotations of shape (number_examples, annotation_dimension)
     :return:
         List of training examples.
     """
-    # validate sequences and labels are paired correctly
-    assert sequences.shape[0] == labels.shape[0]
+    # validate sequences and labels and annotations have correct number of examples
+    assert all((len(data) for data in [sequences, labels, annotations))
 
     # construct training examples
+    print "generating training examples..."
     training_examples = [
-        AttentionTrainingExample(sequence=s, label=l,
-                                 annotation_vector=extractor.extract_annotation(np.expand_dims(s, axis=0)))
-        for (s, l) in zip(sequences, labels)]
+            AttentionTrainingExample(sequence=s, label=l, annotations=a) 
+            for (s, l, a) in tqdm(zip(sequences, labels, annotations))]
+
     return AttentionDataset(training_examples)
-
-
-def main(args):
-    # construct dataset
-    extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
-                                    layer_name=args.layer)
-    dataset = convert_to_attention_dataset(sequences=np.load(args.sequences),
-                                           labels=np.load(args.labels),
-                                           extractor=extractor)
-    # write dataset
-    with open(os.path.join(args.directory, "{}.pkl".format(args.name)), 'w') as f:
-        pickle.dump(dataset, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
@@ -62,4 +79,3 @@ if __name__ == "__main__":
                         help="Path to output directory for saving datasets.")
     args = parser.parse_args(sys.argv[1:])
     main(args)
-
