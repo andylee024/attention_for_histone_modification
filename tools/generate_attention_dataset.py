@@ -7,26 +7,36 @@ import numpy as np
 import os
 import pickle
 import sys
+import time
 from tqdm import tqdm
 
 from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
 from attention_for_histone_modification.libs.preprocessing.ml_types import AttentionTrainingExample, AttentionDataset
+from attention_for_histone_modification.libs.utilities.profile import time_function
 
 def main(args):
+
+    print "Starting dataset generation... \n"
+
+    # step 1 - extract annotations
     extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
                                     layer_name=args.layer)
     sequences = np.load(args.sequences)
-    labels = np.load(arg.labels)
-    annotations = _get_annotations(sequeces, extractor)
-
+    labels = np.load(args.labels)
+    annotations = _get_annotations(sequences, extractor)
+   
+    # step 2 - create dataset
     dataset = _convert_to_attention_dataset(sequences=sequences,
                                             labels=labels,
                                             annotations=annotations)
     # write dataset
-    with open(os.path.join(args.directory, "{}.pkl".format(args.name)), 'w') as f:
+    dataset_path = os.path.join(args.directory, "{}.pkl".format(args.name))
+    with open(dataset_path, 'w') as f:
         pickle.dump(dataset, f)
+        print "saved dataset {}".format(dataset_path)
 
 
+@time_function
 def _get_annotations(sequences, extractor):
     """Get annotations corresponding to sequences.
     
@@ -37,6 +47,7 @@ def _get_annotations(sequences, extractor):
     :return annotations:
         Numpy array containing annotations of shape (number_examples, annotation_dimension)
     """
+    print "extracting annotations for {} sequences...".format(sequences.shape[0]) 
     return extractor.extract_annotation_batch(sequences)
 
 
@@ -53,12 +64,12 @@ def _convert_to_attention_dataset(sequences, labels, annotations):
         List of training examples.
     """
     # validate sequences and labels and annotations have correct number of examples
-    assert all((len(data) for data in [sequences, labels, annotations))
+    assert all(array.shape for array in (sequences, labels, annotations))
 
     # construct training examples
-    print "generating training examples..."
+    print "generating training examples progress..."
     training_examples = [
-            AttentionTrainingExample(sequence=s, label=l, annotations=a) 
+            AttentionTrainingExample(sequence=s, label=l, annotation=a) 
             for (s, l, a) in tqdm(zip(sequences, labels, annotations))]
 
     return AttentionDataset(training_examples)
