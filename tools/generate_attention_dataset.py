@@ -24,6 +24,9 @@ def main(args):
         print "dataset path: {}".format(dataset_path)
         return
 
+    if args.gpu:
+        _run_gpu_mode()
+
     print "Starting dataset generation... \n"
 
     # step 1 - extract annotations
@@ -51,6 +54,13 @@ def _get_dataset_path(directory, dataset_name):
     :return: Path to saved dataset.
     """
     return os.path.join(directory, "{}.pkl".format(dataset_name))
+
+
+def _run_gpu_mode():
+    """Setup theano to run in GPU mode."""
+    import theano
+    theano.config.device='gpu'
+    theano.config.floatX = 'float32'
 
 
 @time_function
@@ -112,5 +122,6 @@ if __name__ == "__main__":
         "--dry-run",
         action="store_true",
         help="If flag set, do not create dataset just return path.")
+    parser.add_argument("--gpu", action="store_true", help="If flag set, run using a GPU.")
     args = parser.parse_args(sys.argv[1:])
     main(args)
