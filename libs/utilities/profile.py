@@ -15,7 +15,7 @@ def time_function(f):
         result = f(*args, **kwargs)
         end_time = time.time()
 
-        print_timing(function_name=f.__name__, duration=start_time-end_time)
+        print_timing(function_name=f.__name__, duration=end_time-start_time)
         return result
 
     return profile_time
