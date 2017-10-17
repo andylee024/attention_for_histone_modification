@@ -24,9 +24,6 @@ def main(args):
         print "dataset path: {}".format(dataset_path)
         return
 
-    if args.gpu:
-        _run_gpu_mode()
-
     print "Starting dataset generation... \n"
 
     # step 1 - extract annotations
@@ -35,6 +32,11 @@ def main(args):
     sequences = np.load(args.sequences)
     labels = np.load(args.labels)
     annotations = _get_annotations(sequences, extractor)
+
+    print "Sequences shape: {}".format(sequences.shape)
+    print "Labels shape: {}".format(labels.shape)
+    print "Annotations shape: {}".format(annotations.shape)
+    exit(1)
 
     # step 2 - create dataset
     dataset = _convert_to_attention_dataset(sequences=sequences,
@@ -77,7 +79,6 @@ def _get_annotations(sequences, extractor):
     print "extracting annotations for {} sequences...".format(sequences.shape[0])
     return extractor.extract_annotation_batch(sequences)
 
-
 def _convert_to_attention_dataset(sequences, labels, annotations):
     """Extracts data from deepsea dataset.
 
@@ -90,9 +91,9 @@ def _convert_to_attention_dataset(sequences, labels, annotations):
     :return:
         List of training examples.
     """
-    # validate sequences and labels and annotations have correct number of
-    # examples
-    assert all(array.shape for array in (sequences, labels, annotations))
+    # validate sequences and labels and annotations have correct number of examples
+    number_examples, _, _ = sequences.shape
+    assert all((array.shape[0] == number_examples) for array in [sequences, labels, annotations])
 
     # construct training examples
     print "generating training examples progress..."
