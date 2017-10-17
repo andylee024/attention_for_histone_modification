@@ -16,36 +16,29 @@ from attention_for_histone_modification.libs.utilities.profile import time_funct
 
 
 def main(args):
-
     dataset_path = _get_dataset_path(args.directory, args.name)
 
     if args.dry_run:
         print "Dry run... not actually creating dataset."
         print "dataset path: {}".format(dataset_path)
-        return
+    
+    else:
+        print "Starting dataset generation... \n"
 
-    print "Starting dataset generation... \n"
+        extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
+                                        layer_name=args.layer)
 
-    # step 1 - extract annotations
-    extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
-                                    layer_name=args.layer)
-    sequences = np.load(args.sequences)
-    labels = np.load(args.labels)
-    annotations = _get_annotations(sequences, extractor)
+        sequences = np.load(args.sequences)
+        labels = np.load(args.labels)
+        annotations = _get_annotations(sequences, extractor)
 
-    print "Sequences shape: {}".format(sequences.shape)
-    print "Labels shape: {}".format(labels.shape)
-    print "Annotations shape: {}".format(annotations.shape)
-    exit(1)
+        dataset = _convert_to_attention_dataset(sequences=sequences,
+                                                labels=labels,
+                                                annotations=annotations)
 
-    # step 2 - create dataset
-    dataset = _convert_to_attention_dataset(sequences=sequences,
-                                            labels=labels,
-                                            annotations=annotations)
-    # write dataset
-    with open(dataset_path, 'w') as f:
-        pickle.dump(dataset, f)
-        print "saved dataset {}".format(dataset_path)
+        with open(dataset_path, 'w') as f:
+            pickle.dump(dataset, f)
+            print "saved dataset {}".format(dataset_path)
 
 
 def _get_dataset_path(directory, dataset_name):
@@ -76,8 +69,8 @@ def _get_annotations(sequences, extractor):
     :return annotations:
         Numpy array containing annotations of shape (number_examples, annotation_dimension)
     """
-    print "extracting annotations for {} sequences...".format(sequences.shape[0])
     return extractor.extract_annotation_batch(sequences)
+
 
 def _convert_to_attention_dataset(sequences, labels, annotations):
     """Extracts data from deepsea dataset.
@@ -119,10 +112,7 @@ if __name__ == "__main__":
                         help="Path to .npy file containing labels (Y-data).")
     parser.add_argument("-d", "--directory", type=str, required=True,
                         help="Path to output directory for saving datasets.")
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="If flag set, do not create dataset just return path.")
-    parser.add_argument("--gpu", action="store_true", help="If flag set, run using a GPU.")
+    parser.add_argument("--dry-run", action="store_true", help="If set, do not create dataset just return path.")
+    parser.add_argument("--gpu", action="store_true", help="If set, run using a GPU.")
     args = parser.parse_args(sys.argv[1:])
     main(args)
