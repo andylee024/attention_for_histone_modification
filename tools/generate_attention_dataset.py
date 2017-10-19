@@ -20,7 +20,7 @@ def main(args):
 
     if args.dry_run:
         print "Dry run... not actually creating dataset."
-        print "dataset path: {}".format(dataset_path)
+        print "dataset path: {}".format(os.path.abspath(dataset_path))
     
     else:
         print "Starting dataset generation... \n"
@@ -38,7 +38,7 @@ def main(args):
 
         with open(dataset_path, 'w') as f:
             pickle.dump(dataset, f)
-            print "saved dataset {}".format(dataset_path)
+            print "saved dataset: {}".format(os.path.abspath(dataset_path))
 
 
 def _get_dataset_path(directory, dataset_name):
@@ -89,7 +89,7 @@ def _convert_to_attention_dataset(sequences, labels, annotations):
     assert all((array.shape[0] == number_examples) for array in [sequences, labels, annotations])
 
     # construct training examples
-    print "generating training examples progress..."
+    print "generating training examples ..."
     training_examples = [
         AttentionTrainingExample(sequence=s, label=l, annotation=a)
         for (s, l, a) in tqdm(zip(sequences, labels, annotations))]
