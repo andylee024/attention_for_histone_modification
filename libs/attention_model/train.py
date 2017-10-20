@@ -1,3 +1,4 @@
+import pickle
 import tensorflow as tf
 
 from attention_model import AttentionConfiguration, AttentionModel, LearningConfiguration
@@ -6,25 +7,29 @@ from mock_data import create_dummy_batch_data
 
 def main():
 
+    #training_examples = load_attention_training_examples()
+    
+    # create attention model configurations
+    attention_config = AttentionConfiguration(batch_size=100,
+                                              sequence_length=1000,
+                                              vocabulary_size=4,
+                                              prediction_classes=919,
+                                              number_of_annotations=1,
+                                              annotation_size=925,
+                                              hidden_state_dimension=112)
+    learning_config = LearningConfiguration()
+    
+    # print batch data dimensions
+    print_batch_data_dimension(attention_config)
+
     # specify training parameters
     number_epochs = 1
     number_iterations = 10
 
-    # create attention model configurations
-    attention_config = AttentionConfiguration(batch_size=100,
-                                              sequence_length=400,
-                                              vocabulary_size=4,
-                                              prediction_classes=3,
-                                              number_of_annotation_vectors=196,
-                                              annotation_vector_dimension=500,
-                                              hidden_state_dimension=112)
-    learning_config = LearningConfiguration()
-
     # create attention model
-    attention_model = AttentionModel(attention_config=attention_config, learning_config=learning_config)
-
-    # print batch data dimensions
-    print_batch_data_dimension(attention_config)
+    attention_model = AttentionModel(
+        attention_config=attention_config,
+        learning_config=learning_config)
 
     # specify tensorflow ops
     model_inputs = attention_model.get_model_inputs()
@@ -56,11 +61,25 @@ def main():
 # Utilities
 # ----------------------------------------------------------------------------------------------------------------------
 
+def load_attention_training_examples():
+    """Load training examples for attention model."""
+    dataset_path = "/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/annotated_validation_dataset.pkl"
+    with open(dataset_path, 'r') as f:
+        dataset = pickle.load(f)
+
+        print "dataset loaded..."
+        print "sequence shape: {}".format(dataset.training_examples[0].sequence.shape)
+        print "label shape: {}".format(dataset.training_examples[0].label.shape)
+        print "annotation shape: {}".format(dataset.training_examples[0].annotation.shape)
+
+        return dataset.training_examples
+
+
 def print_batch_data_dimension(attention_config):
     """Print batch data dimensions for debugging purposes."""
     batch_data = create_dummy_batch_data(attention_config)
     print "sequence tensor shape {}".format(batch_data.sequence_tensor.shape)
-    print "annotation vector tensor shape {}".format(batch_data.annotation_tensor.shape)
+    print "annotation tensor shape {}".format(batch_data.annotation_tensor.shape)
     print "label tensor shape {}".format(batch_data.label_tensor.shape)
 
 
@@ -72,10 +91,10 @@ def get_train_op(loss_op):
     """
     learning_rate = 0.001
     with tf.name_scope('optimizer'):
-        # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         train_op = optimizer.minimize(loss_op)
         return train_op
+
 
 if __name__ == "__main__":
     main()
