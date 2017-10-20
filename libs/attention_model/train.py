@@ -1,3 +1,5 @@
+import collections
+import numpy as np
 import pickle
 import tensorflow as tf
 
@@ -7,8 +9,9 @@ from mock_data import create_dummy_batch_data
 
 def main():
 
-    #training_examples = load_attention_training_examples()
+    dataset = load_attention_dataset()
     
+
     # create attention model configurations
     attention_config = AttentionConfiguration(batch_size=100,
                                               sequence_length=1000,
@@ -18,9 +21,6 @@ def main():
                                               annotation_size=925,
                                               hidden_state_dimension=112)
     learning_config = LearningConfiguration()
-    
-    # print batch data dimensions
-    print_batch_data_dimension(attention_config)
 
     # specify training parameters
     number_epochs = 1
@@ -47,7 +47,8 @@ def main():
         sess.run(init_op)
         for e in range(number_epochs):
             for i in range(number_iterations):
-                batch_data = create_dummy_batch_data(attention_config)
+                #batch_data = create_dummy_batch_data(attention_config)
+                batch_data = create_batch_data(dataset, batch_size=attention_config.batch_size)
 
                 feed_dict = {model_inputs['sequences']: batch_data.sequence_tensor,
                              model_inputs['features']: batch_data.annotation_tensor,
@@ -61,7 +62,24 @@ def main():
 # Utilities
 # ----------------------------------------------------------------------------------------------------------------------
 
-def load_attention_training_examples():
+TrainingTensor = collections.namedtuple(
+    typename="TrainingTensor", field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
+
+def create_batch_data(dataset, batch_size=100):
+    """Get training examples as batch data."""
+    training_examples = dataset.training_examples[:batch_size]
+
+    sequence_tensor = np.concatenate([np.expand_dims(te.sequence, axis=0) for te in training_examples], axis=0)
+    label_tensor = np.concatenate([np.expand_dims(te.label, axis=0) for te in training_examples], axis=0)
+    annotation_tensor = np.concatenate([np.reshape(te.annotation, (1, 1, te.annotation.size)) for te in training_examples], axis=0)
+
+    return TrainingTensor(sequence_tensor=sequence_tensor,
+                          annotation_tensor=annotation_tensor,
+                          label_tensor=label_tensor)
+
+
+
+def load_attention_dataset():
     """Load training examples for attention model."""
     dataset_path = "/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/annotated_validation_dataset.pkl"
     with open(dataset_path, 'r') as f:
@@ -71,13 +89,11 @@ def load_attention_training_examples():
         print "sequence shape: {}".format(dataset.training_examples[0].sequence.shape)
         print "label shape: {}".format(dataset.training_examples[0].label.shape)
         print "annotation shape: {}".format(dataset.training_examples[0].annotation.shape)
+        return dataset
 
-        return dataset.training_examples
 
-
-def print_batch_data_dimension(attention_config):
+def print_batch_data_dimension(batch_data):
     """Print batch data dimensions for debugging purposes."""
-    batch_data = create_dummy_batch_data(attention_config)
     print "sequence tensor shape {}".format(batch_data.sequence_tensor.shape)
     print "annotation tensor shape {}".format(batch_data.annotation_tensor.shape)
     print "label tensor shape {}".format(batch_data.label_tensor.shape)
