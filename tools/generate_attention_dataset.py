@@ -11,12 +11,14 @@ import time
 from tqdm import tqdm
 
 from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
-from attention_for_histone_modification.libs.preprocessing.ml_types import AttentionTrainingExample, AttentionDataset
+from attention_for_histone_modification.libs.preprocessing.ml_types import (AttentionDatasetConfig, AttentionDataset, AttentionTrainingExample)
 from attention_for_histone_modification.libs.utilities.profile import time_function
 
 
 def main(args):
-    dataset_path = _get_dataset_path(args.directory, args.name)
+
+    attention_config = AttentionDatasetConfig(args.config)
+    dataset_path = _get_dataset_path(args.directory, attention_config.dataset_name)
 
     if args.dry_run:
         print "Dry run... not actually creating dataset."
@@ -25,20 +27,16 @@ def main(args):
     else:
         print "Starting dataset generation... \n"
 
-        extractor = AnnotationExtractor(model=get_trained_danq_model(args.weights),
-                                        layer_name=args.layer)
+        extractor = AnnotationExtractor(model=get_trained_danq_model(attention_config.model_weights),
+                                        layer_name=attention_config.model_layer)
 
-        sequences = np.load(args.sequences)
-        labels = np.load(args.labels)
+        sequences = np.load(attention_config.sequence_data)
+        labels = np.load(attention_config.label_data)
         annotations = _get_annotations(sequences, extractor)
 
-        dataset = _convert_to_attention_dataset(sequences=sequences,
-                                                labels=labels,
-                                                annotations=annotations)
+        dataset = _convert_to_attention_dataset(sequences, labels, annotations)
+        print "finished generating dataset."
 
-        with open(dataset_path, 'w') as f:
-            pickle.dump(dataset, f)
-            print "saved dataset: {}".format(os.path.abspath(dataset_path))
 
 
 def _get_dataset_path(directory, dataset_name):
@@ -49,13 +47,6 @@ def _get_dataset_path(directory, dataset_name):
     :return: Path to saved dataset.
     """
     return os.path.join(directory, "{}.pkl".format(dataset_name))
-
-
-def _run_gpu_mode():
-    """Setup theano to run in GPU mode."""
-    import theano
-    theano.config.device='gpu'
-    theano.config.floatX = 'float32'
 
 
 @time_function
@@ -98,20 +89,9 @@ def _convert_to_attention_dataset(sequences, labels, annotations):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Command line tool for extracting data from deepsea dataset.")
-    parser.add_argument("-n", "--name", type=str, required=True,
-                        help="name of dataset")
-    parser.add_argument("-w", "--weights", type=str, required=True,
-                        help="path to DANQ keras weights.")
-    parser.add_argument("-l", "--layer", type=str, required=True,
-                        help="name of layer from DANQ for which to extract annotation vectors.")
-    parser.add_argument("-x", "--sequences", type=str,
-                        help="Path to .npy file containing sequences (X-data).")
-    parser.add_argument("-y", "--labels", type=str,
-                        help="Path to .npy file containing labels (Y-data).")
-    parser.add_argument("-d", "--directory", type=str, required=True,
-                        help="Path to output directory for saving datasets.")
+    parser = argparse.ArgumentParser(description="Command line tool for extracting data from deepsea dataset.")
+    parser.add_argument("-c", "--config", type=str, required=True, help="configuration json for dataset generation.")
+    parser.add_argument("-d", "--directory", type=str, required=True, help="Path to output directory for datasets.")
     parser.add_argument("--dry-run", action="store_true", help="If set, do not create dataset just return path.")
     parser.add_argument("--gpu", action="store_true", help="If set, run using a GPU.")
     args = parser.parse_args(sys.argv[1:])
