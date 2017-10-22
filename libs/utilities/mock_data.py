@@ -1,18 +1,18 @@
 import collections
 import numpy as np
 
+from attention_for_histone_modification.libs.preprocessing.attention_types import (
+    AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Mock data structures for ML
 # ----------------------------------------------------------------------------------------------------------------------
-
-TrainingExample = collections.namedtuple(
-    typename='TrainingExample', field_names=['sequence', 'annotation', 'label'])
 
 TrainingTensor = collections.namedtuple(
     typename="TrainingTensor", field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Public APIs for creating mock data
+# APIs for creating mock data
 # ----------------------------------------------------------------------------------------------------------------------
 def create_dummy_sequence(sequence_length=100, vocabulary_size=4, one_hot=True):
     """Create dummy sequence.
@@ -59,6 +59,9 @@ def create_dummy_annotation_batch(number_of_annotations, annotation_dimension, b
     annotations = [np.expand_dims(create_dummy_annotation(number_of_annotations, annotation_dimension), axis=0) for _ in xrange(batch_size)]
     return np.concatenate(annotations, axis=0)
 
+# ----------------------------------------------------------------------------------------------------------------------
+# APIs for creating attention types
+# ----------------------------------------------------------------------------------------------------------------------
 def create_dummy_training_example(attention_config):
     """Create a single training example with dummy data according to attention configuration object."""
 
@@ -72,9 +75,20 @@ def create_dummy_training_example(attention_config):
     dummy_annotation = create_dummy_annotation(number_of_annotations=attention_config.number_of_annotations,
                                                annotation_dimension=attention_config.annotation_dimension)
                                                 
-    return TrainingExample(sequence=dummy_sequence,
-                           annotation_vectors=dummy_annotation,
-                           label=dummy_label)
+    return AttentionTrainingExample(sequence=dummy_sequence,
+                                    annotation_vectors=dummy_annotation,
+                                    label=dummy_label)
+
+def create_dummy_dataset_config():
+    """Create dummy attention dataset config."""
+    return AttentionDatasetConfig(dataset_name="dummy_dataset",
+                                  sequence_data="",
+                                  label_data="",
+                                  indices=None,
+                                  model_name="",
+                                  model_weights="",
+                                  model_layer="")
+
 
 def create_dummy_batch_data(attention_config):
     """Create training examples for batch.

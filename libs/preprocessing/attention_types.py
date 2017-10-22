@@ -58,9 +58,9 @@ class AttentionDataset(object):
 class AttentionDatasetConfig(object):
     """Config object of attention dataset."""
 
-    def __init__(self,
+    def __init__(self, 
                  dataset_name,
-                 sequence_data,
+                 sequence_data, 
                  label_data,
                  indices,
                  model_name,
@@ -79,12 +79,12 @@ class AttentionDatasetConfig(object):
             timestamp     : current timestamp
 
         """
-        self.dataset_name = dataset_information['dataset_name']
-        self.sequence_data = dataset_information['sequence_data']
-        self.label_data = dataset_information['label_data']
-        self.model_name = dataset_information['model_name']
-        self.model_weights = dataset_information['model_weights']
-        self.model_layer = dataset_information['model_layer']
+        self.dataset_name = dataset_name
+        self.sequence_data = sequence_data
+        self.label_data = label_data
+        self.model_name = model_name
+        self.model_weights = model_weights
+        self.model_layer = model_layer
         self.timestamp = str(datetime.datetime.now())
 
 

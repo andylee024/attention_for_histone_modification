@@ -8,7 +8,7 @@ import unittest
 from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
 
 # Configuration variables
-DANQ_WEIGHTS_FILE = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/configs/danq_weights.hdf5'
+DANQ_WEIGHTS_FILE = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/danq_weights.hdf5'
 LAYER_NAME = 'dense_1'
 ANNOTATION_VECTOR_SIZE = 925
 
