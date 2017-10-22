@@ -57,7 +57,7 @@ def create_dataset_from_attention_partition(base_config, attention_partition):
     :return: AttentionDataset type.
     """
     return AttentionDataset(
-        config=convert_to_partition_dataset_config(base_config, attention_config),
+        config=convert_to_partition_dataset_config(base_config, attention_partition),
         training_examples=generate_training_examples_from_attention_partition(attention_partition))
 
 
