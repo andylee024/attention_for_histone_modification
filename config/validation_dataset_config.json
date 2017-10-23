@@ -1,0 +1,9 @@
+{
+    "description": "A configuration file specifying options for generating attention dataset.", 
+    "dataset_name": "attention_validation_dataset",
+    "sequence_data": "/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/deepsea_valid_x.npy",
+    "label_data": "/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/deepsea_valid_y.npy",
+    "model_name": "DANQ",
+    "model_weights": "/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/danq_weights.hdf5",
+    "model_layer": "dense_1"
+}
