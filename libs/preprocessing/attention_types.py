@@ -95,13 +95,3 @@ def _validate_dataset_information(dataset_information):
     assert os.path.exists(dataset_information['label_data'])
 
 
-def load_attention_json_config(config_path):
-    """Validate and load attention dataset config from json file.
-
-    :param config_path: path to dataset json config
-    :return: dictionary containing dataset information
-    """
-    with open(config_path, 'r') as f:
-        dataset_information = json.load(f)
-        _validate_dataset_information(dataset_information)
-        return dataset_information

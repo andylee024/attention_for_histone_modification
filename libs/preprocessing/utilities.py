@@ -32,10 +32,7 @@ def partition_indices(number_of_samples, partition_size):
 
     # index by 1, otherwise split operation yields a list with the first
     # element as an empty list.
-    cutoffs = np.arange(
-        start=0,
-        stop=number_of_samples,
-        step=partition_size)[
-        1:]
+    cutoffs = np.arange(start=0, stop=number_of_samples, step=partition_size)[1:]
     indices = np.arange(number_of_samples)
-    return np.split(indices, cutoffs)
+    partitions = np.split(indices, cutoffs)
+    return partitions, len(partitions)
