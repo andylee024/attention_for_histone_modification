@@ -47,10 +47,10 @@ class TestBatchProcessing(unittest.TestCase):
                                                   batch_size=cls.batch_size)
 
         # create partition data
-        partition_data_stream = partition_and_annotate_data(sequences=cls.sequence_data,
-                                                            labels=cls.label_data,
-                                                            extractor=cls.extractor,
-                                                            partition_size=cls.partition_size)
+        partition_data_stream, _ = partition_and_annotate_data(sequences=cls.sequence_data,
+                                                               labels=cls.label_data,
+                                                               extractor=cls.extractor,
+                                                               partition_size=cls.partition_size)
 
         cls.partition_data = list(partition_data_stream)
 

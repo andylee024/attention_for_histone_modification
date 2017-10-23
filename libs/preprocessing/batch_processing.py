@@ -37,14 +37,16 @@ def partition_and_annotate_data(sequences, labels, extractor, partition_size=100
     :param partition_size:
         Specifies size of each subarray that divides sequences and labels.
     :return:
-        Iterator to data_partition structs.
+        2-tuple (iterator to data_partition structs, total number of partitions)
     """
     number_of_samples = ensure_samples_match(sequences, labels)
+    index_partitions, total_partitions = partition_indices(number_of_samples, partition_size)
+
     return (AttentionPartition(indices=index_partition,
                                sequences=sequences[index_partition],
                                labels=labels[index_partition],
                                annotations=extractor.extract_annotation_batch(sequences[index_partition]))
-            for index_partition in partition_indices(number_of_samples, partition_size))
+            for index_partition in index_partitions), total_partitions
 
 
 def create_dataset_from_attention_partition(base_config, attention_partition):
