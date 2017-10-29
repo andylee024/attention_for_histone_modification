@@ -25,19 +25,6 @@ class AttentionTrainingExample(object):
         self.annotation = annotation
 
 
-class ShardedAttentionDataset(object):
-    """A sharded attention dataset that satisfies dataset API."""
-
-    def __init__(self, config, datasets):
-        """Initialize sharded attention dataset.
-
-        :param config: attention dataset config containing information about dataset.
-        :param datasets: a list of paths to attention datasets.
-        """
-        self.config = config
-        self.datasets = datasets
-
-
 class AttentionDataset(object):
     """Dataset for attention models."""
 
@@ -48,8 +35,7 @@ class AttentionDataset(object):
         :param training_examples: List of generated training examples.
         """
         assert isinstance(config, AttentionDatasetConfig)
-        assert all((isinstance(te, AttentionTrainingExample)
-                    for te in training_examples))
+        assert all((isinstance(te, AttentionTrainingExample) for te in training_examples))
 
         self.config = config
         self.training_examples = training_examples
