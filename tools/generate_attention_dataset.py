@@ -180,7 +180,6 @@ def _create_attention_config_from_json(json_path):
                                       model_name=dataset_information['model_name'],
                                       model_weights=dataset_information['model_weights'],
                                       model_layer=dataset_information['model_layer'])
-        #_validate_dataset_information(dataset_information)
 
 def _get_dataset_path(directory, dataset_name):
     """Return dataset path.

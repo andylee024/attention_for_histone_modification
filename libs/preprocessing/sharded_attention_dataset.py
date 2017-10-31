@@ -2,25 +2,30 @@
 # Attention for Histone Modification
 #
 
-import datetime
-import json
-import os
-
-
 class ShardedAttentionDataset(object):
     """A sharded attention dataset that satisfies dataset API."""
 
-    def __init__(self, config, datasets):
+    def __init__(self, index_to_dataset):
         """Initialize sharded attention dataset.
 
-        :param config: attention dataset config containing information about dataset.
-        :param datasets: a list of paths to attention datasets.
+        :param index_to_dataset:
+            Python dictionary where (key, value) pair is training example index and path to 
+            attention dataset, respectively.
         """
-        self.config = config
-        self.datasets = datasets
+        self.index_to_datasets = index_to_dataset
+        self.total_examples = 0
+
+    def get_training_examples(indices):
+        """Get training examples corresponding to supplied indices.
+
+        :param indices: List of indices corresponding to query.
+        :return: List of training examples whose order maps onto supplied indices.
+        """
+        assert min(indices) >=0 and max(indices) < self.total_examples
+        pass
 
 
-def AttentionDatasetInfo(object):
+class AttentionDatasetInfo(object):
     """A struct that caches information about an attention dataset.
     
     Used to optimize performance of ShardedAttentionDataset.
