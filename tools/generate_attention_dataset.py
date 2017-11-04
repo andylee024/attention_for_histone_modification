@@ -13,13 +13,15 @@ import shutil
 import sys
 from tqdm import tqdm
 
-from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
+from attention_for_histone_modification.libs.preprocessing.extractor import (
+        AnnotationExtractor, get_trained_danq_model)
 from attention_for_histone_modification.libs.preprocessing.batch_processing import (
         partition_and_annotate_data, create_dataset_from_attention_partition)
 from attention_for_histone_modification.libs.preprocessing.attention_types import (
         AttentionDatasetConfig, AttentionDataset, AttentionTrainingExample)
 from attention_for_histone_modification.libs.preprocessing.sharded_attention_dataset import (
         AttentionDatasetInfo, ShardedAttentionDataset)
+from attention_for_histone_modification.libs.preprocessing.utilities import load_pickle_object
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger()
@@ -135,7 +137,7 @@ def _handle_sharded_dataset_generation(dataset_directory):
     """
     attention_info_directory = os.path.join(dataset_directory, ATTENTION_DATASET_INFO_DIRECTORY_NAME)
     attention_info_paths = (os.path.join(attention_info_directory, f) for f in os.listdir(attention_info_directory))
-    attention_info_list = [_load_pickle_object(f) for f in attention_info_paths]
+    attention_info_list = [load_pickle_object(f) for f in attention_info_paths]
     _write_object_to_disk(obj=_create_sharded_attention_dataset(attention_info_list), 
                           path=os.path.join(dataset_directory, "sharded_attention_dataset.pkl"))
 
@@ -178,10 +180,6 @@ def _write_object_to_disk(obj, path):
         pickle.dump(obj, f)
         logger.info("\t Saved {}".format(path))
 
-def _load_pickle_object(path):
-    """Load a pickled object for supplied path."""
-    with open(path, 'r') as f:
-        return pickle.load(f)
 
 def _copy_data(src, dst):
     """Copy src file to dst directory and log information.

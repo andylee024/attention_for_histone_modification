@@ -3,7 +3,7 @@
 #
 
 import numpy as np
-
+import pickle
 
 def ensure_samples_match(*arrays):
     """Ensure that input arrays have same number of samples.
@@ -36,3 +36,9 @@ def partition_indices(number_of_samples, partition_size):
     indices = np.arange(number_of_samples)
     partitions = np.split(indices, cutoffs)
     return partitions, len(partitions)
+
+
+def load_pickle_object(path):
+    """Load a pickled object for supplied path."""
+    with open(path, 'r') as f:
+        return pickle.load(f)

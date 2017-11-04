@@ -3,20 +3,19 @@
 #
 
 import numpy as np
+import tempfile
 import unittest
 
-from attention_for_histone_modification.libs.preprocessing.attention_types import (
-        AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+from attention_for_histone_modification.libs.preprocessing.sharded_attention_dataset import (
+        ShardedAttentionDataset, AttentionDatasetInfo)
 
-class TestAttentionDataset(unittest.TestCase):
-    """Tests for extracting annotation vectors."""
+class TestShardedAttentionDataset(unittest.TestCase):
+    """Tests for SharededAttentionDataset."""
 
     @classmethod
     def setUpClass(cls):
         """Initialize  attention dataset for tests."""
-        indices = range(3)
-        cls.training_examples = [create_training_example_by_label(idx) for idx in indices]
-        cls.attention_config = create_attention_config_by_indices(indices)
+    
 
     def test_get_training_examples(self):
         """Test annotation extraction for single sequence."""
@@ -27,10 +26,10 @@ class TestAttentionDataset(unittest.TestCase):
         self.assertRaises(IndexError, dataset.get_training_examples, invalid_indices)
 
         # method returns correct indices
-        query_indices = [0, 1]
-        indices, training_examples = zip(*dataset.get_training_examples(query_indices))
+        valid_indices = [0, 1]
+        training_examples = dataset.get_training_examples(valid_indices)
 
-        expected_labels = list(indices)
+        expected_labels = valid_indices
         actual_labels = [te.label for te in training_examples]
         self.assertListEqual(actual_labels, expected_labels)
 

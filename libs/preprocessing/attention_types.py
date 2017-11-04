@@ -46,11 +46,11 @@ class AttentionDataset(object):
         Note that supplied indices must be contained in indices found in attention config.
        
         :param indices: Indices corresponding to training examples to query.
-        :return: List of training examples that map to indices.
+        :return: List of 2-tuples of the form (index, training_example). 
         """
         _validate_indices(indices, self.config)
         normalized_indices = [idx - self.config.indices[0] for idx in indices]
-        return [self.training_examples[idx] for idx in normalized_indices]
+        return [(idx, self.training_examples[query_idx]) for (idx, query_idx) in zip(indices, normalized_indices)]
 
 
 class AttentionDatasetConfig(object):
