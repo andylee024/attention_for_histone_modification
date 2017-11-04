@@ -12,8 +12,8 @@ class ShardedAttentionDataset(object):
             Python dictionary where (key, value) pair is training example index and path to 
             attention dataset, respectively.
         """
-        self.index_to_datasets = index_to_dataset
-        self.total_examples = 0
+        self.index_to_dataset = index_to_dataset
+        self.total_examples = len(index_to_dataset)
 
     def get_training_examples(indices):
         """Get training examples corresponding to supplied indices.
@@ -22,7 +22,6 @@ class ShardedAttentionDataset(object):
         :return: List of training examples whose order maps onto supplied indices.
         """
         assert min(indices) >=0 and max(indices) < self.total_examples
-        pass
 
 
 class AttentionDatasetInfo(object):
@@ -43,6 +42,12 @@ class AttentionDatasetInfo(object):
         self.indices = indices
 
     @property
-    def number_of_training_examples():
+    def number_of_training_examples(self):
         return len(self.indices)
+
+    @property
+    def index_to_dataset(self):
+        """Return a mapping from training example index to the dataset path."""
+        return {index: self.dataset_path for index in self.indices}
+
 

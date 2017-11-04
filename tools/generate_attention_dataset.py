@@ -3,8 +3,9 @@
 #
 
 import argparse
-import logging
+from itertools import chain
 import json
+import logging
 import numpy as np
 import os
 import pickle
@@ -17,7 +18,8 @@ from attention_for_histone_modification.libs.preprocessing.batch_processing impo
         partition_and_annotate_data, create_dataset_from_attention_partition)
 from attention_for_histone_modification.libs.preprocessing.attention_types import (
         AttentionDatasetConfig, AttentionDataset, AttentionTrainingExample)
-from attention_for_histone_modification.libs.preprocessing.sharded_attention_dataset import AttentionDatasetInfo 
+from attention_for_histone_modification.libs.preprocessing.sharded_attention_dataset import (
+        AttentionDatasetInfo, ShardedAttentionDataset)
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger()
@@ -37,10 +39,11 @@ def main(args):
         exit(0)
 
     else:
-        _handle_overwrite(dataset_directory, args.overwrite)
-        _handle_directory_creation(dataset_directory)
-        _handle_raw_data_copy(attention_config, dataset_directory, args.copy_data)
-        _handle_dataset_generation(attention_config, dataset_directory)
+        #_handle_overwrite(dataset_directory, args.overwrite)
+        #_handle_directory_creation(dataset_directory)
+        #_handle_raw_data_copy(attention_config, dataset_directory, args.copy_data)
+        #_handle_dataset_generation(attention_config, dataset_directory)
+        _handle_sharded_dataset_generation(dataset_directory)
 
 # ------------------------------------------------------------------------------------------------------------
 # Logic for dataset generation 
@@ -122,36 +125,63 @@ def _handle_dataset_generation(attention_config, dataset_directory, partition_si
         _handle_dataset_write_logic(dataset, dataset_directory)
 
 
+def _handle_sharded_dataset_generation(dataset_directory):
+    """Creates sharded attention dataset and stores to disk.
+
+    Assumes that attention dataset info objects have been created and 
+    stored to disk.
+
+    :param dataset_directory: base directory of dataset
+    """
+    attention_info_directory = os.path.join(dataset_directory, ATTENTION_DATASET_INFO_DIRECTORY_NAME)
+    attention_info_paths = (os.path.join(attention_info_directory, f) for f in os.listdir(attention_info_directory))
+    attention_info_list = [_load_pickle_object(f) for f in attention_info_paths]
+    _write_object_to_disk(obj=_create_sharded_attention_dataset(attention_info_list), 
+                          path=os.path.join(dataset_directory, "sharded_attention_dataset.pkl"))
+
+
 def _handle_dataset_write_logic(attention_dataset, dataset_directory):
     """Handle logic associated with writing datasets and other associated objects to disk.
 
     :param attention_dataset: instance of attention dataset
     :param dataset_directory: base directory that contains generated data.
     """
-    # prepare and write attention dataset
+    # specify attention dataset path
     attention_dataset_id = "{}.pkl".format(attention_dataset.config.dataset_name)
     attention_dataset_path = os.path.join(
             dataset_directory, ATTENTION_DATASET_DIRECTORY_NAME, attention_dataset_id)
     
-    with open(attention_dataset_path, 'w') as f:
-        pickle.dump(attention_dataset, f)
-        logger.info("\t Saved {}".format(attention_dataset_path))
-
-    # parepare and write attention dataset info
+    # specify attention dataset info path
     attention_info_id = "{}_info.pkl".format(attention_dataset.config.dataset_name)
     attention_info_path = os.path.join(
         dataset_directory, ATTENTION_DATASET_INFO_DIRECTORY_NAME, attention_info_id)
-    attention_info = AttentionDatasetInfo(dataset_path=attention_dataset_path,
-                                          indices=attention_dataset.config.indices)
 
-    with open(attention_info_path, 'w') as f:
-        pickle.dump(attention_info, f)
-        logger.info("\t Saved {}".format(attention_info_path))
+    _write_object_to_disk(attention_dataset, attention_dataset_path)
+    _write_object_to_disk(
+            AttentionDatasetInfo(dataset_path=attention_dataset_path, indices=attention_dataset.config.indices), 
+            attention_info_path)
 
 
 # ------------------------------------------------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------------------------------------------------
+def _write_object_to_disk(obj, path):
+    """Write object to disk at specified location.
+    
+    :param obj: object to pickle
+    :param path: path to save location
+    """
+    if os.path.exists(path):
+        raise IOException("Attempted to write object to path {}, but path already exists!".format(path))
+
+    with open(path, 'w') as f:
+        pickle.dump(obj, f)
+        logger.info("\t Saved {}".format(path))
+
+def _load_pickle_object(path):
+    """Load a pickled object for supplied path."""
+    with open(path, 'r') as f:
+        return pickle.load(f)
 
 def _copy_data(src, dst):
     """Copy src file to dst directory and log information.
@@ -164,7 +194,11 @@ def _copy_data(src, dst):
     shutil.copy(src, dst)
     logger.info("\t copied {} to {}".format(os.path.basename(src), dst))
 
-
+def _create_sharded_attention_dataset(attention_info_list):
+    """Create sharded attention dataset from list of attention info."""
+    sharded_dataset_map = dict(chain.from_iterable(ai.index_to_dataset.items() for ai in attention_info_list))
+    return ShardedAttentionDataset(sharded_dataset_map)
+    
 def _create_attention_config_from_json(json_path):
     """Validate and load attention dataset config from json file.
 
@@ -181,14 +215,6 @@ def _create_attention_config_from_json(json_path):
                                       model_weights=dataset_information['model_weights'],
                                       model_layer=dataset_information['model_layer'])
 
-def _get_dataset_path(directory, dataset_name):
-    """Return dataset path.
-
-    :param directory: Path to directory where datset is stored.
-    :param dataset_name: name of dataset
-    :return: Path to saved dataset.
-    """
-    return os.path.join(directory, "{}.pkl".format(dataset_name))
 
 
 if __name__ == "__main__":
