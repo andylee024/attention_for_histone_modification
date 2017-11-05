@@ -7,47 +7,33 @@ import unittest
 
 from attention_for_histone_modification.libs.preprocessing.attention_types import (
         AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+from attention_for_histone_modification.libs.preprocessing.tests.utilities_for_tests import (
+        create_attention_config_by_indices, create_training_example_by_label)
 
 class TestAttentionDataset(unittest.TestCase):
     """Tests for extracting annotation vectors."""
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         """Initialize  attention dataset for tests."""
-        indices = range(3)
-        cls.training_examples = [create_training_example_by_label(idx) for idx in indices]
-        cls.attention_config = create_attention_config_by_indices(indices)
+        indices = [0, 1, 2]
+        training_examples = [create_training_example_by_label(idx) for idx in indices]
+        attention_config = create_attention_config_by_indices(indices)
 
+        self.dataset = AttentionDataset(config=attention_config, training_examples=training_examples)
+        
     def test_get_training_examples(self):
         """Test annotation extraction for single sequence."""
-        dataset = AttentionDataset(self.attention_config, self.training_examples) 
 
         # method throws when supplied with incorrect indices
         invalid_indices = [4, 5]
-        self.assertRaises(IndexError, dataset.get_training_examples, invalid_indices)
+        self.assertRaises(IndexError, self.dataset.get_training_examples, invalid_indices)
 
         # method returns correct indices
-        query_indices = [0, 1]
-        indices, training_examples = zip(*dataset.get_training_examples(query_indices))
+        query_indices = [0, 1, 2]
+        indexed_training_examples = self.dataset.get_training_examples(query_indices)
+        for (index, te) in indexed_training_examples:
+            self.assertEqual(index, te.label)
 
-        expected_labels = list(indices)
-        actual_labels = [te.label for te in training_examples]
-        self.assertListEqual(actual_labels, expected_labels)
-
-
-def create_training_example_by_label(label):
-    """Create training example with only label field set."""
-    return AttentionTrainingExample(sequence=None, label=label, annotation=None)
-
-def create_attention_config_by_indices(indices):
-    """Create attention configuration with only indices field set."""
-    return AttentionDatasetConfig(dataset_name=None,
-                                  sequence_data=None, 
-                                  label_data=None,
-                                  indices=indices,
-                                  model_name=None,
-                                  model_weights=None,
-                                  model_layer=None)
 
 if __name__ == '__main__':
     unittest.main()

@@ -65,8 +65,9 @@ def _validate_indices(indices, index_to_dataset):
     :param indices: list of indices to query
     :param index_to_dataset: dictionary mapping index to relevant dataset path
     """
-    assert min(indices) >=0 and max(indices) < self.total_examples
-    assert all((index in index_to_dataset for index in indices))
+    index_not_found = not all((index in index_to_dataset for index in indices))
+    if index_not_found:
+        raise KeyError("One of the supplied indices is not found in the dataset.")
 
 
 def _get_dataset_to_indices_list(indices, index_to_dataset):
@@ -80,7 +81,7 @@ def _get_dataset_to_indices_list(indices, index_to_dataset):
     :param index_to_dataset: dictionary mapping index to relevant dataset path
     :return: map from dataset path to indices.
     """
-    d = defaultdict(list)
+    d = collections.defaultdict(list)
     for index in indices:
         dataset_path = index_to_dataset[index]
         d[dataset_path].append(index)

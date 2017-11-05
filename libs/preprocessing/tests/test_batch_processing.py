@@ -16,7 +16,7 @@ from attention_for_histone_modification.libs.utilities.mock_data import (
         create_dummy_dataset_config, create_dummy_sequence_batch, create_dummy_label_batch)
 
 # Configuration variables
-DANQ_WEIGHTS_FILE = '/Users/andy/Projects/bio_startup/research/attention_for_histone_modification/data/danq_weights.hdf5'
+DANQ_WEIGHTS_FILE = '/Users/andy/Projects/biology/research/attention_for_histone_modification/data/danq_weights.hdf5'
 LAYER_NAME = 'dense_1'
 ANNOTATION_DIMENSION = 925
 
