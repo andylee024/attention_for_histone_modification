@@ -25,19 +25,6 @@ class AttentionTrainingExample(object):
         self.annotation = annotation
 
 
-class ShardedAttentionDataset(object):
-    """A sharded attention dataset that satisfies dataset API."""
-
-    def __init__(self, config, datasets):
-        """Initialize sharded attention dataset.
-
-        :param config: attention dataset config containing information about dataset.
-        :param datasets: a list of paths to attention datasets.
-        """
-        self.config = config
-        self.datasets = datasets
-
-
 class AttentionDataset(object):
     """Dataset for attention models."""
 
@@ -48,11 +35,22 @@ class AttentionDataset(object):
         :param training_examples: List of generated training examples.
         """
         assert isinstance(config, AttentionDatasetConfig)
-        assert all((isinstance(te, AttentionTrainingExample)
-                    for te in training_examples))
+        assert all((isinstance(te, AttentionTrainingExample) for te in training_examples))
 
         self.config = config
         self.training_examples = training_examples
+
+    def get_training_examples(self, indices):
+        """Get training examples associated with indices.
+
+        Note that supplied indices must be contained in indices found in attention config.
+       
+        :param indices: Indices corresponding to training examples to query.
+        :return: List of 2-tuples of the form (index, training_example). 
+        """
+        _validate_indices(indices, self.config)
+        normalized_indices = [idx - self.config.indices[0] for idx in indices]
+        return [(idx, self.training_examples[query_idx]) for (idx, query_idx) in zip(indices, normalized_indices)]
 
 
 class AttentionDatasetConfig(object):
@@ -82,16 +80,19 @@ class AttentionDatasetConfig(object):
         self.dataset_name = dataset_name
         self.sequence_data = sequence_data
         self.label_data = label_data
+        self.indices = indices
         self.model_name = model_name
         self.model_weights = model_weights
         self.model_layer = model_layer
         self.timestamp = str(datetime.datetime.now())
 
 
-def _validate_dataset_information(dataset_information):
-    """Validate paths specified in dataset config exist."""
-    assert os.path.exists(dataset_information['model_weights'])
-    assert os.path.exists(dataset_information['sequence_data'])
-    assert os.path.exists(dataset_information['label_data'])
-
+def _validate_indices(indices, attention_config):
+    """Check that supplied indices are all contained in config.
+    
+    :param indices: list of indices to check
+    :param attention_config: attention dataset configuration object.
+    """
+    if not all([(idx in attention_config.indices) for idx in indices]):
+        raise IndexError("Supplied indices not contained in dataset.")
 
