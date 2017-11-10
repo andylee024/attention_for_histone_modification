@@ -23,7 +23,7 @@ class ShardedAttentionDataset(object):
     def get_training_examples(self, indices):
         """Get training examples corresponding to supplied indices.
 
-        :param indices: List of indices corresponding to query.
+        :param indices: Indices corresponding to query (numpy array or python list).
         :return: List of 2-tuples of the form (index, training_example). 
         """
         _validate_indices(indices, self.index_to_dataset)

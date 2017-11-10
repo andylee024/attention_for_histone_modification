@@ -14,8 +14,15 @@ def main():
     number_iterations = 10
 
     dataset = _get_dataset()
-    model = _get_model()
 
+    # hack
+    shuffled_indices = _get_shuffled_indices(dataset.total_examples)
+    index_batches, _ = partition_indices(shuffled_indices, number_iterations)
+    batch_size = len(index_batches[0])
+
+    index_batches = index_batches[:-1]
+
+    model = _get_model(batch_size)
 
     # specify tensorflow ops
     model_inputs = model.get_model_inputs()
@@ -32,12 +39,15 @@ def main():
     with tf.Session() as sess:
         sess.run(init_op)
         for e in range(number_epochs):
-            indices = np.arange(dataset.total_examples)
-            np.random.shuffle(indices)
-            index_batches = partition_indices(indices, number_iterations)
 
-            for ib in index_batches:
-                _, training_examples = dataset.get_training_examples(ib.to_list())
+            # shuffle indices
+            shuffled_indices = _get_shuffled_indices(dataset.total_examples)
+            index_batches[:-1], _ = partition_indices(shuffled_indices, number_iterations)
+            
+            
+            # compute iterations in epoch
+            for idx, ib in enumerate(index_batches):
+                _, training_examples = zip(*dataset.get_training_examples(ib))
                 training_tensor = convert_to_training_tensor(training_examples)
 
                 feed_dict = {model_inputs['sequences']: training_tensor.sequence_tensor,
@@ -45,7 +55,7 @@ def main():
                              model_inputs['labels']: training_tensor.label_tensor}
 
                 _, loss_value = sess.run([train_op, loss_op], feed_dict)
-                print "the loss for iteration {} = {}".format(i, loss_value)
+                print "the loss for iteration {} = {}".format(idx, loss_value)
 
 def _get_dataset():
     """Get dataset used for training model.
@@ -56,12 +66,12 @@ def _get_dataset():
     sharded_path = "/Users/andy/Projects/biology/research/attention_for_histone_modification/data/attention_validation_dataset/sharded_attention_dataset.pkl"
     return load_pickle_object(sharded_path)
 
-def _get_model():
+def _get_model(batch_size):
     """Get model used for training.
     
     :return: AttentionModel
     """
-    attention_config = AttentionConfiguration(batch_size=100,
+    attention_config = AttentionConfiguration(batch_size=batch_size,
                                               sequence_length=1000,
                                               vocabulary_size=4,
                                               prediction_classes=919,
@@ -104,6 +114,12 @@ def get_train_op(loss_op):
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         train_op = optimizer.minimize(loss_op)
         return train_op
+
+def _get_shuffled_indices(number_examples):
+    """Return shuffled indices for number of examples."""
+    indices = np.arange(number_examples)
+    np.random.shuffle(indices)
+    return indices
 
 
 if __name__ == "__main__":

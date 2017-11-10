@@ -76,6 +76,7 @@ class AttentionModel(object):
         logits = self._compute_logits(features=model_inputs['features'],
                                       sequences=model_inputs['sequences'])
         total_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=model_inputs['labels']))
+
         return total_loss / tf.to_float(self._model_config.batch_size)
 
     def _compute_logits(self, features, sequences):
