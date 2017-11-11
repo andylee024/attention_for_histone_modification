@@ -2,8 +2,9 @@
 # Attention for Histone Modification
 #
 
-from attention_for_histone_modification.libs.preprocessing.attention_types import (
-        AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
+from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
+        AttentionDataset, AttentionDatasetConfig)
 
 def create_single_example_dataset_with_label(label):
     """Create a dataset with a single training example with specified label.
