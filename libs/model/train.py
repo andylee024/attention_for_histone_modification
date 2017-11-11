@@ -1,3 +1,5 @@
+import abc
+
 import collections
 import numpy as np
 import pickle
@@ -9,53 +11,126 @@ from attention_for_histone_modification.libs.model.attention_model import Attent
 from attention_for_histone_modification.libs.preprocessing.utilities import load_pickle_object, partition_indices
 
 def main():
-
-    number_epochs = 1
-    number_iterations = 10
-
     dataset = _get_dataset()
 
-    # hack
     shuffled_indices = _get_shuffled_indices(dataset.total_examples)
-    index_batches, _ = partition_indices(shuffled_indices, number_iterations)
+    index_batches, _ = partition_indices(shuffled_indices, 10)
     batch_size = len(index_batches[0])
 
-    index_batches = index_batches[:-1]
-
     model = _get_model(batch_size)
+    trainer = attention_trainer()
 
-    # specify tensorflow ops
-    model_inputs = model.get_model_inputs()
-    loss_op = model.get_loss_op(model_inputs)
-    train_op = get_train_op(loss_op)
+    print "training model"
+    trainer.train_model(model, dataset)
+    return
 
-    # initialize variables
-    init_op = tf.global_variables_initializer()
 
-    # reuse variables
-    tf.get_variable_scope().reuse_variables()
 
-    # initialize session and start training
-    with tf.Session() as sess:
-        sess.run(init_op)
-        for e in range(number_epochs):
 
-            # shuffle indices
-            shuffled_indices = _get_shuffled_indices(dataset.total_examples)
-            index_batches[:-1], _ = partition_indices(shuffled_indices, number_iterations)
-            
-            
-            # compute iterations in epoch
-            for idx, ib in enumerate(index_batches):
-                _, training_examples = zip(*dataset.get_training_examples(ib))
-                training_tensor = convert_to_training_tensor(training_examples)
+class abstract_trainer(object):
+    """Interface for neural network training.
 
-                feed_dict = {model_inputs['sequences']: training_tensor.sequence_tensor,
-                             model_inputs['features']: training_tensor.annotation_tensor,
-                             model_inputs['labels']: training_tensor.label_tensor}
+    The abstract_trainer takes a dataset and model and provides the logic for how
+    to train the model.
+    """
+    __metaclass__ = abc.ABCMeta
+    
+    @abc.abstractmethod
+    def train_model(model, dataset):
+        """Train a model on a dataset."""
 
-                _, loss_value = sess.run([train_op, loss_op], feed_dict)
-                print "the loss for iteration {} = {}".format(idx, loss_value)
+           
+TrainingTensor = collections.namedtuple(typename="TrainingTensor", 
+                                        field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
+
+class attention_trainer(abstract_trainer):
+    """Trainer for attention network."""
+
+    def __init__(self):
+        """Initialize trainer.
+        
+        :param trainer_config: configuration object specifying training parameters.
+        """
+        self._epochs = 1
+        self._iterations = 10
+        self._learning_rate = 0.01
+
+        self._optimizer = self.get_optimizer(self._learning_rate)
+
+
+    def train_model(self, model, dataset):
+        """Train attention model."""
+        
+        # FIX THIS - HACK
+        shuffled_indices = _get_shuffled_indices(dataset.total_examples)
+        index_batches, _ = partition_indices(shuffled_indices, self._iterations)
+        batch_size = len(index_batches[0])
+        index_batches = index_batches[:-1]
+
+        # setup operations
+        model_inputs = model.get_model_inputs()
+        loss_op = model.get_loss_op(model_inputs)
+        train_op = self.get_train_op(self._optimizer, loss_op)
+
+        # initialize variables
+        init_op = tf.global_variables_initializer()
+
+        # reuse variables
+        tf.get_variable_scope().reuse_variables()
+
+        # initialize session and start training
+        with tf.Session() as sess:
+            sess.run(init_op)
+            for _ in xrange(self._epochs):
+
+                # shuffle indices
+                shuffled_indices = _get_shuffled_indices(dataset.total_examples)
+                index_batches[:-1], _ = partition_indices(shuffled_indices, self._iterations)
+                
+                # compute iterations in epoch
+                for idx, ib in enumerate(index_batches):
+                    _, training_examples = zip(*dataset.get_training_examples(ib))
+                    training_tensor = self.convert_to_training_tensor(training_examples)
+
+                    feed_dict = {model_inputs['sequences']: training_tensor.sequence_tensor,
+                                 model_inputs['features']: training_tensor.annotation_tensor,
+                                 model_inputs['labels']: training_tensor.label_tensor}
+
+                    _, loss_value = sess.run([train_op, loss_op], feed_dict)
+                    print "the loss for iteration {} = {}".format(idx, loss_value)
+
+    
+    def convert_to_training_tensor(self, training_examples):
+        """Convert training examples to training tensor for tf model.
+        
+        :param training_examples:
+            List of attention training examples.
+        :return:
+            TrainingTensor object.
+        """
+        sequence_tensor = np.concatenate([np.expand_dims(te.sequence, axis=0) for te in training_examples], axis=0)
+        label_tensor = np.concatenate([np.expand_dims(te.label, axis=0) for te in training_examples], axis=0)
+        annotation_tensor = np.concatenate([np.reshape(te.annotation, (1, 1, te.annotation.size)) for te in training_examples], axis=0)
+        return TrainingTensor(sequence_tensor=sequence_tensor,
+                              annotation_tensor=annotation_tensor,
+                              label_tensor=label_tensor)
+
+
+    def get_optimizer(self, learning_rate):
+        """Get optimizer for training."""
+        return tf.train.AdamOptimizer(learning_rate=learning_rate)
+
+
+    def get_train_op(self, optimizer, loss_op):
+        """Get tensorflow train op for attention model.
+    
+        :param loss_op: Tensorflow loss op
+        :return: Tensorflow train op
+        """
+        with tf.name_scope('optimizer'):
+            train_op = optimizer.minimize(loss_op)
+            return train_op
+
 
 def _get_dataset():
     """Get dataset used for training model.
@@ -84,36 +159,7 @@ def _get_model(batch_size):
 # Utilities
 # ----------------------------------------------------------------------------------------------------------------------
 
-TrainingTensor = collections.namedtuple(
-    typename="TrainingTensor", field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
 
-def convert_to_training_tensor(training_examples):
-    """Convert training examples to training tensor for tf model.
-    
-    :param training_examples:
-        List of attention training examples.
-    :return:
-        TrainingTensor object.
-    """
-    sequence_tensor = np.concatenate([np.expand_dims(te.sequence, axis=0) for te in training_examples], axis=0)
-    label_tensor = np.concatenate([np.expand_dims(te.label, axis=0) for te in training_examples], axis=0)
-    annotation_tensor = np.concatenate([np.reshape(te.annotation, (1, 1, te.annotation.size)) for te in training_examples], axis=0)
-
-    return TrainingTensor(sequence_tensor=sequence_tensor,
-                          annotation_tensor=annotation_tensor,
-                          label_tensor=label_tensor)
-
-def get_train_op(loss_op):
-    """Get tensorflow train op for attention model.
-
-    :param loss_op: Tensorflow loss op
-    :return: Tensorflow train op
-    """
-    learning_rate = 0.001
-    with tf.name_scope('optimizer'):
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        train_op = optimizer.minimize(loss_op)
-        return train_op
 
 def _get_shuffled_indices(number_examples):
     """Return shuffled indices for number of examples."""
