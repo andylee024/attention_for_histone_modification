@@ -1,31 +1,21 @@
-#
-# Attention for Histone Modification
-#
 
 import datetime
-import json
-import os
+
+from attention_for_histone_modification.libs.preprocessing.abstract_dataset import AbstractDataset
+from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
 
 
-class AttentionTrainingExample(object):
-    """Training example for attention models."""
+"""
+An implementation of the abstract dataset for attention based models.
 
-    def __init__(self, sequence, label, annotation):
-        """Initialize training example.
+|-----------------------------|
+|AbstractDataset <<interface>>|
+|-----------------------------|
+    |
+    |-----<<implements>>-- AttentionDataset
+"""
 
-        :param sequence:
-            Numpy array representing genetic sequence.
-        :param label:
-            Numpy array representing multi-class prediction label.
-        :param annotation:
-            Numpy array representing annotation vector corresponding to sequence.
-        """
-        self.sequence = sequence
-        self.label = label
-        self.annotation = annotation
-
-
-class AttentionDataset(object):
+class AttentionDataset(AbstractDataset):
     """Dataset for attention models."""
 
     def __init__(self, config, training_examples):
@@ -40,6 +30,18 @@ class AttentionDataset(object):
         self.config = config
         self.training_examples = training_examples
 
+    def _normalize_index(self, index):
+        """Normalize index according to indices from config."""
+        return index - self.config.indices[0] 
+
+    def get_training_example(self, index):
+        """Get training example corresponding to index.
+        
+        :param index: query index
+        :return: training example corresponding to query index.
+        """
+        return self.training_examples[self._normalize_index(index)]
+
     def get_training_examples(self, indices):
         """Get training examples associated with indices.
 
@@ -49,8 +51,7 @@ class AttentionDataset(object):
         :return: List of 2-tuples of the form (index, training_example). 
         """
         _validate_indices(indices, self.config)
-        normalized_indices = [idx - self.config.indices[0] for idx in indices]
-        return [(idx, self.training_examples[query_idx]) for (idx, query_idx) in zip(indices, normalized_indices)]
+        return [(index, self.get_training_example(index)) for index in indices]
 
 
 class AttentionDatasetConfig(object):

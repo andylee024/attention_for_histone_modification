@@ -49,19 +49,19 @@ class AttentionModel(object):
         """
         # specify dimensions for batch data
         features_shape = (self._model_config.batch_size,
-                          self._model_config.number_of_annotation_vectors,
-                          self._model_config.annotation_vector_dimension)
+                          self._model_config.number_of_annotations,
+                          self._model_config.annotation_size)
 
         sequences_shape = (self._model_config.batch_size,
                            self._model_config.sequence_length,
                            self._model_config.vocabulary_size)
 
-        labels_shape = self._model_config.batch_size
+        labels_shape = (self._model_config.batch_size, self._model_config.prediction_classes)
 
         # create place holders
         features = tf.placeholder(dtype=tf.float32, shape=features_shape)
         sequences = tf.placeholder(dtype=tf.float32, shape=sequences_shape)
-        labels = tf.placeholder(dtype=tf.int32, shape=labels_shape)
+        labels = tf.placeholder(dtype=tf.float32, shape=labels_shape)
 
         return {'features': features, 'sequences': sequences, 'labels': labels}
 
@@ -75,8 +75,8 @@ class AttentionModel(object):
         """
         logits = self._compute_logits(features=model_inputs['features'],
                                       sequences=model_inputs['sequences'])
-        total_loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=model_inputs['labels'],
-                                                                                  logits=logits))
+        total_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=model_inputs['labels']))
+
         return total_loss / tf.to_float(self._model_config.batch_size)
 
     def _compute_logits(self, features, sequences):
@@ -147,7 +147,7 @@ def get_initial_lstm(features, model_config, learning_config):
         initial hidden and memory state.
     """
     # specify dimension of weights and bias of layer
-    weight_shape = (model_config.annotation_vector_dimension, model_config.hidden_state_dimension)  # (D x H)
+    weight_shape = (model_config.annotation_size, model_config.hidden_state_dimension)  # (D x H)
     bias_shape = model_config.hidden_state_dimension
 
     # compute mean of features (N x L x D) -> (N x D)
@@ -190,10 +190,10 @@ def attention_project_features(features, model_config, learning_config, reuse=Fa
         Weighted transformation of features (N x L x D).
     """
     features_shape = (model_config.batch_size,
-                      model_config.number_of_annotation_vectors,
-                      model_config.annotation_vector_dimension)  # (N x L x D)
-    flatten_shape = (-1, model_config.annotation_vector_dimension)  # converts tensor to to (NL x D)
-    weight_shape = (model_config.annotation_vector_dimension, model_config.annotation_vector_dimension)  # (D x D)
+                      model_config.number_of_annotations,
+                      model_config.annotation_size)  # (N x L x D)
+    flatten_shape = (-1, model_config.annotation_size)  # converts tensor to to (NL x D)
+    weight_shape = (model_config.annotation_size, model_config.annotation_size)  # (D x D)
 
     with tf.variable_scope('attention_project_features', reuse=reuse):
 
@@ -224,7 +224,7 @@ def attention_project_hidden_state(hidden_state, model_config, learning_config, 
     :return:
         Weighted transformation on hidden state.
     """
-    weight_shape = (model_config.hidden_state_dimension, model_config.annotation_vector_dimension)
+    weight_shape = (model_config.hidden_state_dimension, model_config.annotation_size)
 
     with tf.variable_scope('attention_project_hidden_state', reuse=reuse):
         w_hidden = tf.get_variable(name='w_hidden', shape=weight_shape, initializer=learning_config.weight_initializer)
@@ -246,7 +246,7 @@ def attention_bias(model_config, learning_config, reuse=False):
     """
     with tf.variable_scope('attention_bias', reuse=reuse):
         bias = tf.get_variable(name='b',
-                               shape=model_config.annotation_vector_dimension,
+                               shape=model_config.annotation_size,
                                initializer=learning_config.constant_initializer)
         return bias
 
@@ -279,7 +279,7 @@ def process_attention_inputs(features, hidden_state, model_config, learning_conf
                                                     learning_config=learning_config)
 
     # transform hidden state (N x 1 x D)
-    projected_hidden_shape = (model_config.batch_size, 1, model_config.annotation_vector_dimension)
+    projected_hidden_shape = (model_config.batch_size, 1, model_config.annotation_size)
     projected_h = attention_project_hidden_state(hidden_state=hidden_state,
                                                  model_config=model_config,
                                                  learning_config=learning_config)
@@ -314,9 +314,9 @@ def compute_attention_probabilities(features, hidden_state, model_config, learni
     """
 
     # specify weight dimensions
-    attention_weight_shape = (model_config.annotation_vector_dimension, 1)
-    attention_reshape_dimension = (-1, model_config.annotation_vector_dimension)  # converts (N x L x D) -> (NL x D)
-    attention_logits_shape = (model_config.batch_size, model_config.number_of_annotation_vectors)  # (N x L)
+    attention_weight_shape = (model_config.annotation_size, 1)
+    attention_reshape_dimension = (-1, model_config.annotation_size)  # converts (N x L x D) -> (NL x D)
+    attention_logits_shape = (model_config.batch_size, model_config.number_of_annotations)  # (N x L)
 
     with tf.variable_scope('attention_layer', reuse=reuse):
         projected_features, projected_h, bias = process_attention_inputs(features=features,
@@ -377,7 +377,7 @@ def decode_lstm(hidden_state, context, model_config, learning_config, reuse=Fals
     """
     # specify dimensions of weights and biases
     hidden_weight_shape = (model_config.hidden_state_dimension, model_config.prediction_classes)
-    context_weight_shape = (model_config.annotation_vector_dimension, model_config.prediction_classes)
+    context_weight_shape = (model_config.annotation_size, model_config.prediction_classes)
 
     with tf.variable_scope('decode_lstm', reuse=reuse):
         w_hidden = tf.get_variable(name='w_hidden',

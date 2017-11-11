@@ -11,8 +11,9 @@ import os
 import sys
 from tqdm import tqdm
 
-from attention_for_histone_modification.libs.preprocessing.attention_types import (
-        AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
+        AttentionDataset, AttentionDatasetConfig)
+from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
 from attention_for_histone_modification.libs.preprocessing.batch_processing import (
         partition_and_annotate_data, create_dataset_from_attention_partition)
 from attention_for_histone_modification.libs.preprocessing.extractor import (
