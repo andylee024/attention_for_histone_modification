@@ -4,9 +4,9 @@
 
 import unittest
 
-from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
 from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
+from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
 from attention_for_histone_modification.libs.preprocessing.tests.utilities_for_tests import (
         create_attention_config_by_indices, create_training_example_by_label)
 

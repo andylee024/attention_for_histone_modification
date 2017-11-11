@@ -4,8 +4,9 @@
 import collections
 from copy import deepcopy
 
-from attention_for_histone_modification.libs.preprocessing.attention_types import (
-    AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
+        AttentionDataset, AttentionDatasetConfig)
+from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
 from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
 from attention_for_histone_modification.libs.preprocessing.utilities import ensure_samples_match, partition_indices
 

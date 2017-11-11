@@ -21,26 +21,8 @@ def ensure_samples_match(*arrays):
     else:
         raise ValueError("Arrays do not same number of samples!")
 
-
-def partition_indices(indices, partition_size):
-    """Given number of samples and partition size, generate list of partition indices.
-
-    E.G.
-        number_of_samples = 10
-        partition_size = 3
-        return: [ [0,1,2], [3,4,5], [6,7,8], [9] ]
-    """
-    number_of_samples = len(indices)
-    assert partition_size <= number_of_samples
-
-    # index by 1, otherwise split operation yields a list with the first
-    # element as an empty list.
-    cutoffs = np.arange(start=0, stop=number_of_samples, step=partition_size)[1:]
-    partitions = np.split(indices, cutoffs)
-    return partitions, len(partitions)
-
-
-#def partition_indices(number_of_samples, partition_size):
+# TODO: Change this so that it works for training 
+#def partition_indices(indices, partition_size):
 #    """Given number of samples and partition size, generate list of partition indices.
 #
 #    E.G.
@@ -48,14 +30,32 @@ def partition_indices(indices, partition_size):
 #        partition_size = 3
 #        return: [ [0,1,2], [3,4,5], [6,7,8], [9] ]
 #    """
+#    number_of_samples = len(indices)
 #    assert partition_size <= number_of_samples
 #
 #    # index by 1, otherwise split operation yields a list with the first
 #    # element as an empty list.
 #    cutoffs = np.arange(start=0, stop=number_of_samples, step=partition_size)[1:]
-#    indices = np.arange(number_of_samples)
 #    partitions = np.split(indices, cutoffs)
 #    return partitions, len(partitions)
+
+
+def partition_indices(number_of_samples, partition_size):
+    """Given number of samples and partition size, generate list of partition indices.
+
+    E.G.
+        number_of_samples = 10
+        partition_size = 3
+        return: [ [0,1,2], [3,4,5], [6,7,8], [9] ]
+    """
+    assert partition_size <= number_of_samples
+
+    # index by 1, otherwise split operation yields a list with the first
+    # element as an empty list.
+    cutoffs = np.arange(start=0, stop=number_of_samples, step=partition_size)[1:]
+    indices = np.arange(number_of_samples)
+    partitions = np.split(indices, cutoffs)
+    return partitions, len(partitions)
 
 
 def load_pickle_object(path):
