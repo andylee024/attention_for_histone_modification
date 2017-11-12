@@ -154,7 +154,7 @@ def attention_project_features(features, model_config, parameter_policy, reuse=F
     :return
         Weighted transformation of features (N x L x D).
     """
-    features_shape = (model_config.batch_size,
+    features_shape = (get_batch_size(features),
                       model_config.number_of_annotations,
                       model_config.annotation_size)  # (N x L x D)
     flatten_shape = (-1, model_config.annotation_size)  # converts tensor to to (NL x D)
@@ -244,7 +244,7 @@ def process_attention_inputs(features, hidden_state, model_config, parameter_pol
                                                     parameter_policy=parameter_policy)
 
     # transform hidden state (N x 1 x D)
-    projected_hidden_shape = (model_config.batch_size, 1, model_config.annotation_size)
+    projected_hidden_shape = (get_batch_size(features), 1, model_config.annotation_size)
     projected_h = attention_project_hidden_state(hidden_state=hidden_state,
                                                  model_config=model_config,
                                                  parameter_policy=parameter_policy)
@@ -281,7 +281,7 @@ def compute_attention_probabilities(features, hidden_state, model_config, parame
     # specify weight dimensions
     attention_weight_shape = (model_config.annotation_size, 1)
     attention_reshape_dimension = (-1, model_config.annotation_size)  # converts (N x L x D) -> (NL x D)
-    attention_logits_shape = (model_config.batch_size, model_config.number_of_annotations)  # (N x L)
+    attention_logits_shape = (get_batch_size(features), model_config.number_of_annotations)  # (N x L)
 
     with tf.variable_scope('attention_layer', reuse=reuse):
         projected_features, projected_h, bias = process_attention_inputs(features=features,
@@ -319,8 +319,8 @@ def select_context(features, attention_probabilities, model_config):
     :return:
         (N x D), where each row represents the context vector selected for ith example.
     """
-    selected_context_indices = tf.argmax(attention_probabilities, axis=1)
-    gather_indices = convert_to_gather_indices(selected_context_indices, model_config)
+    selected_context_indices = tf.argmax(attention_probabilities, axis=1, output_type=tf.int32)
+    gather_indices = convert_to_gather_indices(selected_context_indices, batch_size=get_batch_size(features))
     return tf.gather_nd(params=features, indices=gather_indices)
 
 
@@ -368,8 +368,12 @@ def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=Fal
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def convert_to_gather_indices(selected_indices, model_config):
+def convert_to_gather_indices(selected_indices, batch_size):
     """Convert selected context indices to tensor to be used for gather_nd."""
-    indices = tf.reshape(np.arange(model_config.batch_size), shape=(model_config.batch_size, 1))
-    selected_context_indices = tf.reshape(selected_indices, shape=(model_config.batch_size, 1))
-    return tf.concat((indices, selected_context_indices), axis=1)
+    indices = tf.reshape(tf.range(batch_size), shape=(-1, 1))
+    selected_context_indices = tf.reshape(selected_indices, shape=(-1, 1))
+    return tf.concat([indices, selected_context_indices], axis=1)
+
+def get_batch_size(tensor):
+    """Return batch size of tensor."""
+    return tf.shape(tensor)[0]

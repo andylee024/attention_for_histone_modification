@@ -3,14 +3,16 @@ import numpy as np
 import tensorflow as tf
 
 from attention_for_histone_modification.libs.trainer.abstract_trainer import AbstractTrainer
+from attention_for_histone_modification.libs.trainer.trainer_config import TrainerConfiguration
 from attention_for_histone_modification.libs.preprocessing.utilities import partition_indices, get_shuffled_indices
 
 class AttentionTrainer(AbstractTrainer):
     """Trainer implementation for training attention models."""
 
-    def __init__(self):
+    def __init__(self, config):
         """Initialize trainer."""
-        self._epochs = 1
+        assert isinstance(config, TrainerConfiguration)
+        self.config = config
 
     def train_model(self, dataset, model, optimizer):
         """Train attention model."""
@@ -25,8 +27,12 @@ class AttentionTrainer(AbstractTrainer):
         with tf.Session() as sess:
             sess.run(init_op)
 
-            for _ in xrange(self._epochs):
-                train_epoch(graph_inputs, ops, dataset, sess)
+            for _ in xrange(self.config.epochs):
+                train_epoch(graph_inputs=graph_inputs, 
+                            op_dictionary=ops, 
+                            dataset=dataset, 
+                            batch_size=self.config.batch_size, 
+                            sess=sess)
 
 
 def build_computational_graph(model, optimizer):
@@ -52,13 +58,12 @@ def build_computational_graph(model, optimizer):
     return graph_inputs, op_dictionary
 
 
-def train_epoch(graph_inputs, op_dictionary, dataset, sess):
+def train_epoch(graph_inputs, op_dictionary, dataset, batch_size, sess):
     """Execute one epoch of training.
     
     :param graph_inputs: dictionary mapping string keys to tf.placeholders in computational graph.
     :param op_dictionary: dictionary mapping string keys to tensorflow ops.
     """
-    batch_size = 100
     epoch_batches, _ = partition_indices(get_shuffled_indices(dataset.total_examples), batch_size)
     for iteration_number, batch_indices in enumerate(epoch_batches):
         _, training_examples = zip(*dataset.get_training_examples(batch_indices))
@@ -80,9 +85,9 @@ def get_loss_op(predictions, labels):
     :param labels: groundtruth labels.
     :return: loss
     """
+    number_of_samples = tf.shape(labels)[0]
     total_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions, labels=labels))
-    batch_size = 100
-    return total_loss / batch_size 
+    return total_loss / tf.cast(number_of_samples, tf.float32)
 
 
 def get_train_op(optimizer, loss_op):
