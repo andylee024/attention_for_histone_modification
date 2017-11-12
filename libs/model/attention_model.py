@@ -1,25 +1,25 @@
 import tensorflow as tf
 import numpy as np
 
-from attention_for_histone_modification.libs.model.attention_configuration import AttentionConfiguration, LearningConfiguration
 from attention_for_histone_modification.libs.model.abstract_model import AbstractTensorflowModel
+from attention_for_histone_modification.libs.model.attention_configuration import AttentionConfiguration
+from attention_for_histone_modification.libs.model.parameter_initialization import ParameterInitializationPolicy
 
 
 class AttentionModel(AbstractTensorflowModel):
 
-    def __init__(self, attention_config, learning_config):
+    def __init__(self, attention_config, parameter_policy):
         """Initialize attention model.
 
         :param attention_config:
             Configuration object for specifying attention model.
-        :param learning_config:
-            Configuration object for specifying weight and bias initialization.
+        :param parameter_policy:
+            Policy specifying weight and bias initialization.
         """
-        self._validate_attention_configuration(attention_config)
-        self._validate_learning_configuration(learning_config)
-
+        assert isinstance(attention_config, AttentionConfiguration)
+        assert isinstance(parameter_policy, ParameterInitializationPolicy)
         self._model_config = attention_config
-        self._learning_config = learning_config
+        self._parameter_policy = parameter_policy
 
         # initialize LSTM for attention model
         self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
@@ -34,7 +34,7 @@ class AttentionModel(AbstractTensorflowModel):
        # Get initial LSTM states for each sequence in batch (N x H)
        memory_state, hidden_state = get_initial_lstm(features=features,
                                                      model_config=self._model_config,
-                                                     learning_config=self._learning_config)
+                                                     parameter_policy=self._parameter_policy)
 
        # Get hidden states for each sequence in batch (N x H)
        for t in range(self._model_config.sequence_length):
@@ -46,7 +46,7 @@ class AttentionModel(AbstractTensorflowModel):
        attention_probabilities = compute_attention_probabilities(features=features,
                                                                  hidden_state=hidden_state,
                                                                  model_config=self._model_config,
-                                                                 learning_config=self._learning_config,
+                                                                 parameter_policy=self._parameter_policy,
                                                                  reuse=None)
 
        # Select context based on attention probabilities.
@@ -56,7 +56,7 @@ class AttentionModel(AbstractTensorflowModel):
        logits = decode_lstm(hidden_state=hidden_state,
                             context=context,
                             model_config=self._model_config,
-                            learning_config=self._learning_config,
+                            parameter_policy=self._parameter_policy,
                             reuse=None)
 
        return logits
@@ -87,21 +87,13 @@ class AttentionModel(AbstractTensorflowModel):
         labels_shape = (None, self._model_config.prediction_classes)
         return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape)}
 
-    @staticmethod
-    def _validate_attention_configuration(configuration):
-        assert isinstance(configuration, AttentionConfiguration)
-
-    @staticmethod
-    def _validate_learning_configuration(configuration):
-        assert isinstance(configuration, LearningConfiguration)
-
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Attention Layers
 # ----------------------------------------------------------------------------------------------------------------------
 
-def get_initial_lstm(features, model_config, learning_config):
+def get_initial_lstm(features, model_config, parameter_policy):
     """Returns initial state of LSTM conditioned on CNN annotation features.
 
     Note that we want to separately initialize the hidden state for each sequence since sequences are independent.
@@ -114,7 +106,7 @@ def get_initial_lstm(features, model_config, learning_config):
             D = dimension of each annotation vector
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :return:
         initial hidden and memory state.
@@ -129,12 +121,12 @@ def get_initial_lstm(features, model_config, learning_config):
     with tf.variable_scope('initial_lstm', reuse=False):
 
         # specify hidden state weight and bias for LSTM initialization
-        w_h = tf.get_variable('w_h', shape=weight_shape, initializer=learning_config.weight_initializer)
-        b_h = tf.get_variable('b_h', shape=bias_shape, initializer=learning_config.constant_initializer)
+        w_h = tf.get_variable('w_h', shape=weight_shape, initializer=parameter_policy.weight_initializer)
+        b_h = tf.get_variable('b_h', shape=bias_shape, initializer=parameter_policy.constant_initializer)
 
         # specify memory state weight and bias for LSTM initialization
-        w_c = tf.get_variable('w_c', shape=weight_shape, initializer=learning_config.weight_initializer)
-        b_c = tf.get_variable('b_c', shape=bias_shape, initializer=learning_config.constant_initializer)
+        w_c = tf.get_variable('w_c', shape=weight_shape, initializer=parameter_policy.weight_initializer)
+        b_c = tf.get_variable('b_c', shape=bias_shape, initializer=parameter_policy.constant_initializer)
 
         # get initial logits
         h_init_logits = tf.matmul(features_mean, w_h) + b_h
@@ -147,7 +139,7 @@ def get_initial_lstm(features, model_config, learning_config):
         return h_init, c_init
 
 
-def attention_project_features(features, model_config, learning_config, reuse=False):
+def attention_project_features(features, model_config, parameter_policy, reuse=False):
     """Apply weighted transformation to features.
 
      :param features:
@@ -157,7 +149,7 @@ def attention_project_features(features, model_config, learning_config, reuse=Fa
             D = dimension of each annotation vector
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :return
         Weighted transformation of features (N x L x D).
@@ -172,7 +164,7 @@ def attention_project_features(features, model_config, learning_config, reuse=Fa
 
         # specify weight matrix
         w_features = tf.get_variable(
-            name='w_features', shape=weight_shape, initializer=learning_config.weight_initializer) # (D x D)
+            name='w_features', shape=weight_shape, initializer=parameter_policy.weight_initializer) # (D x D)
 
         # flatten features and project
         features_flat = tf.reshape(tensor=features, shape=flatten_shape)  # (N x L x D) -> (NL x D)
@@ -183,14 +175,14 @@ def attention_project_features(features, model_config, learning_config, reuse=Fa
         return projected_features
 
 
-def attention_project_hidden_state(hidden_state, model_config, learning_config, reuse=False):
+def attention_project_hidden_state(hidden_state, model_config, parameter_policy, reuse=False):
     """Apply weighted transformation to hidden state.
 
     :param hidden_state:
         Hidden state of LSTM.
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :param reuse:
         Bool. Use existing weight matrix if true. Use new weight matrix if false.
@@ -200,17 +192,17 @@ def attention_project_hidden_state(hidden_state, model_config, learning_config, 
     weight_shape = (model_config.hidden_state_dimension, model_config.annotation_size)
 
     with tf.variable_scope('attention_project_hidden_state', reuse=reuse):
-        w_hidden = tf.get_variable(name='w_hidden', shape=weight_shape, initializer=learning_config.weight_initializer)
+        w_hidden = tf.get_variable(name='w_hidden', shape=weight_shape, initializer=parameter_policy.weight_initializer)
         projected_h = tf.matmul(hidden_state, w_hidden)
         return projected_h
 
 
-def attention_bias(model_config, learning_config, reuse=False):
+def attention_bias(model_config, parameter_policy, reuse=False):
     """Get attention bias.
 
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :param reuse:
         Bool. Use existing weight matrix if true. Use new weight matrix if false.
@@ -220,11 +212,11 @@ def attention_bias(model_config, learning_config, reuse=False):
     with tf.variable_scope('attention_bias', reuse=reuse):
         bias = tf.get_variable(name='b',
                                shape=model_config.annotation_size,
-                               initializer=learning_config.constant_initializer)
+                               initializer=parameter_policy.constant_initializer)
         return bias
 
 
-def process_attention_inputs(features, hidden_state, model_config, learning_config):
+def process_attention_inputs(features, hidden_state, model_config, parameter_policy):
     """Apply transformations to raw inputs to attention model.
 
     This function performs weighted transformations on two raw input sources for the attention model.
@@ -241,7 +233,7 @@ def process_attention_inputs(features, hidden_state, model_config, learning_conf
         Hidden state conditioned on CNN annotation vectors.
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :return:
         3-tuple of transformed inputs (features, hidden state, bias)
@@ -249,23 +241,23 @@ def process_attention_inputs(features, hidden_state, model_config, learning_conf
     # transform features (N x L x D)
     projected_features = attention_project_features(features=features,
                                                     model_config=model_config,
-                                                    learning_config=learning_config)
+                                                    parameter_policy=parameter_policy)
 
     # transform hidden state (N x 1 x D)
     projected_hidden_shape = (model_config.batch_size, 1, model_config.annotation_size)
     projected_h = attention_project_hidden_state(hidden_state=hidden_state,
                                                  model_config=model_config,
-                                                 learning_config=learning_config)
+                                                 parameter_policy=parameter_policy)
     projected_h = tf.transpose(projected_h)
     projected_h = tf.reshape(projected_h, shape=projected_hidden_shape)
 
     # get bias
-    bias = attention_bias(model_config=model_config, learning_config=learning_config)
+    bias = attention_bias(model_config=model_config, parameter_policy=parameter_policy)
 
     return projected_features, projected_h, bias
 
 
-def compute_attention_probabilities(features, hidden_state, model_config, learning_config, reuse=False):
+def compute_attention_probabilities(features, hidden_state, model_config, parameter_policy, reuse=False):
     """Return attention probabilities.
 
     :param features:
@@ -277,7 +269,7 @@ def compute_attention_probabilities(features, hidden_state, model_config, learni
         Hidden state conditioned on CNN annotation vectors.
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :param reuse:
         Bool. Use existing weight matrix if true. Use new weight matrix if false.
@@ -295,7 +287,7 @@ def compute_attention_probabilities(features, hidden_state, model_config, learni
         projected_features, projected_h, bias = process_attention_inputs(features=features,
                                                                          hidden_state=hidden_state,
                                                                          model_config=model_config,
-                                                                         learning_config=learning_config)
+                                                                         parameter_policy=parameter_policy)
 
         # create attention input
         # note that +bias is a broadcasted operation
@@ -305,7 +297,7 @@ def compute_attention_probabilities(features, hidden_state, model_config, learni
         # compute attention logits
         w_attention = tf.get_variable(name='w_attention',
                                       shape=attention_weight_shape,
-                                      initializer=learning_config.weight_initializer)  # (D x 1)
+                                      initializer=parameter_policy.weight_initializer)  # (D x 1)
         attention_logits = tf.matmul(attention_input, w_attention)  # (NL x 1)
         attention_logits = tf.reshape(attention_logits, shape=attention_logits_shape)  # (N x L)
 
@@ -332,7 +324,7 @@ def select_context(features, attention_probabilities, model_config):
     return tf.gather_nd(params=features, indices=gather_indices)
 
 
-def decode_lstm(hidden_state, context, model_config, learning_config, reuse=False):
+def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=False):
     """Get predictions given hidden state and context for batch.
 
     :param hidden_state:
@@ -341,7 +333,7 @@ def decode_lstm(hidden_state, context, model_config, learning_config, reuse=Fals
         Selected context vectors.
     :param model_config:
         Configuration object for specifying attention model.
-    :param learning_config:
+    :param parameter_policy:
         Configuration object for specifying weight and bias initialization.
     :param reuse:
         Bool. Use existing weight matrix if true. Use new weight matrix if false.
@@ -355,15 +347,15 @@ def decode_lstm(hidden_state, context, model_config, learning_config, reuse=Fals
     with tf.variable_scope('decode_lstm', reuse=reuse):
         w_hidden = tf.get_variable(name='w_hidden',
                                    shape=hidden_weight_shape,
-                                   initializer=learning_config.weight_initializer)
+                                   initializer=parameter_policy.weight_initializer)
 
         w_context = tf.get_variable(name='w_context',
                                     shape=context_weight_shape,
-                                    initializer=learning_config.weight_initializer)
+                                    initializer=parameter_policy.weight_initializer)
 
         bias_out = tf.get_variable('bias_out',
                                    shape=model_config.prediction_classes,
-                                   initializer=learning_config.constant_initializer)
+                                   initializer=parameter_policy.constant_initializer)
 
         hidden_contribution = tf.matmul(hidden_state, w_hidden)
         context_contribution = tf.matmul(context, w_context)

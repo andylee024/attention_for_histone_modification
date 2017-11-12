@@ -1,15 +1,3 @@
-"""Configuration objects for attention model."""
-
-import tensorflow as tf
-
-
-class LearningConfiguration(object):
-    """Configuration object to initialize weights, biases for deep learning models."""
-
-    def __init__(self):
-        self.weight_initializer = tf.contrib.layers.xavier_initializer()
-        self.constant_initializer = tf.constant_initializer(0.0)
-
 
 class AttentionConfiguration(object):
     """Configuration object containing parameters to attention model."""

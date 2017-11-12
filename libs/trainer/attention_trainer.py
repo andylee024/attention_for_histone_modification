@@ -2,12 +2,8 @@ import collections
 import numpy as np
 import tensorflow as tf
 
-from attention_for_histone_modification.libs.model.attention_configuration import AttentionConfiguration, LearningConfiguration
-from attention_for_histone_modification.libs.model.attention_model import AttentionModel 
 from attention_for_histone_modification.libs.trainer.abstract_trainer import AbstractTrainer
-
-from attention_for_histone_modification.libs.preprocessing.utilities import (
-        load_pickle_object, partition_indices, get_shuffled_indices)
+from attention_for_histone_modification.libs.preprocessing.utilities import partition_indices, get_shuffled_indices
 
 class AttentionTrainer(AbstractTrainer):
     """Trainer implementation for training attention models."""
@@ -16,7 +12,6 @@ class AttentionTrainer(AbstractTrainer):
         """Initialize trainer."""
         self._epochs = 1
 
-    
     def train_model(self, dataset, model, optimizer):
         """Train attention model."""
         
@@ -100,19 +95,8 @@ def get_train_op(optimizer, loss_op):
         train_op = optimizer.minimize(loss_op)
         return train_op
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Utilities
-# ----------------------------------------------------------------------------------------------------------------------
-
 TrainingTensor = collections.namedtuple(typename="TrainingTensor", 
                                         field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
-
-#TODO: Specify optimizer configuration
-def get_optimizer(learning_rate):
-    """Get optimizer for training."""
-    return tf.train.AdamOptimizer(learning_rate=learning_rate)
-
 
 def convert_to_training_tensor(training_examples):
     """Convert training examples to training tensor for tf model.
@@ -126,30 +110,4 @@ def convert_to_training_tensor(training_examples):
     label_tensor = np.concatenate([np.expand_dims(te.label, axis=0) for te in training_examples], axis=0)
     annotation_tensor = np.concatenate([np.reshape(te.annotation, (1, 1, te.annotation.size)) for te in training_examples], axis=0)
     return TrainingTensor(sequence_tensor=sequence_tensor, annotation_tensor=annotation_tensor, label_tensor=label_tensor)
-
-def main():
-
-    # setup
-    dataset = sharded_path = "/Users/andy/Projects/biology/research/attention_for_histone_modification/data/attention_validation_dataset/sharded_attention_dataset.pkl"
-    attention_config = AttentionConfiguration(batch_size=100,
-                                              sequence_length=1000,
-                                              vocabulary_size=4,
-                                              prediction_classes=919,
-                                              number_of_annotations=1,
-                                              annotation_size=925,
-                                              hidden_state_dimension=112)
-    learning_config = LearningConfiguration()
-
-    # setup objects
-    model = AttentionModel(attention_config=attention_config, learning_config=learning_config)
-    dataset = load_pickle_object(sharded_path)
-    trainer = AttentionTrainer()
-    optimizer = get_optimizer(0.01)
-
-    # train model
-    trainer.train_model(dataset=dataset, model=model, optimizer=optimizer)
-
-if __name__ == "__main__":
-    main()
-
 
