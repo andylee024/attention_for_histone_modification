@@ -58,7 +58,6 @@ class AttentionModel(AbstractTensorflowModel):
                             model_config=self._model_config,
                             parameter_policy=self._parameter_policy,
                             reuse=None)
-
        return logits
    
     @property

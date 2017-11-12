@@ -5,12 +5,11 @@
 import numpy as np
 import unittest
 
-from attention_for_histone_modification.libs.preprocessing.batch_processing import (
+from attention_for_histone_modification.libs.dataset.preprocessing.shard_processing import (
         convert_to_partition_dataset_config, 
         generate_training_examples_from_attention_partition, 
         partition_and_annotate_data)
-
-from attention_for_histone_modification.libs.preprocessing.extractor import (
+from attention_for_histone_modification.libs.dataset.preprocessing.extractor import (
         AnnotationExtractor, get_trained_danq_model)
 from attention_for_histone_modification.libs.utilities.mock_data import (
         create_dummy_dataset_config, create_dummy_sequence_batch, create_dummy_label_batch)

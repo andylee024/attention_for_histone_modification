@@ -5,7 +5,7 @@ from attention_for_histone_modification.libs.optimizer.optimizer_config import O
 from attention_for_histone_modification.libs.optimizer.optimizer_factory import create_tf_optimizer 
 from attention_for_histone_modification.libs.trainer.attention_trainer import AttentionTrainer
 from attention_for_histone_modification.libs.trainer.trainer_config import TrainerConfiguration
-from attention_for_histone_modification.libs.preprocessing.utilities import load_pickle_object
+from attention_for_histone_modification.libs.utilities.io_utils import load_pickle_object
 
 def main():
 

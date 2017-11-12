@@ -5,11 +5,26 @@
 import collections
 from itertools import chain
 
-from attention_for_histone_modification.libs.preprocessing.abstract_dataset import AbstractDataset
-from attention_for_histone_modification.libs.preprocessing.utilities import load_pickle_object
+from attention_for_histone_modification.libs.dataset.types.abstract_dataset import AbstractDataset
+from attention_for_histone_modification.libs.utilities.io_utils import load_pickle_object
+
+
+"""
+A sharded implementation of the attention dataset class.
+
+|-----------------------------|
+|AbstractDataset <<interface>>|
+|-----------------------------|
+    |
+    |-----ShardedAttentionDataset <<implementation>>
+"""
 
 class ShardedAttentionDataset(AbstractDataset):
-    """A sharded attention dataset that satisfies dataset API."""
+    """A sharded attention dataset that satisfies dataset API.
+    
+    The sharded dataset provides an interface for interacting with multiple attention datasets
+    without having to load all datasets into memory at once.
+    """
 
     def __init__(self, index_to_dataset):
         """Initialize sharded attention dataset.

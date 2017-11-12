@@ -1,8 +1,8 @@
 
 import datetime
 
-from attention_for_histone_modification.libs.preprocessing.abstract_dataset import AbstractDataset
-from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
+from attention_for_histone_modification.libs.dataset.types.abstract_dataset import AbstractDataset
+from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
 
 
 """
@@ -12,7 +12,7 @@ An implementation of the abstract dataset for attention based models.
 |AbstractDataset <<interface>>|
 |-----------------------------|
     |
-    |-----<<implements>>-- AttentionDataset
+    |-----AttentionDataset <<implementation>>
 """
 
 class AttentionDataset(AbstractDataset):
