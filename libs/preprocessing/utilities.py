@@ -21,39 +21,25 @@ def ensure_samples_match(*arrays):
     else:
         raise ValueError("Arrays do not same number of samples!")
 
-# TODO: Change this so that it works for training 
-#def partition_indices(indices, partition_size):
-#    """Given number of samples and partition size, generate list of partition indices.
-#
-#    E.G.
-#        number_of_samples = 10
-#        partition_size = 3
-#        return: [ [0,1,2], [3,4,5], [6,7,8], [9] ]
-#    """
-#    number_of_samples = len(indices)
-#    assert partition_size <= number_of_samples
-#
-#    # index by 1, otherwise split operation yields a list with the first
-#    # element as an empty list.
-#    cutoffs = np.arange(start=0, stop=number_of_samples, step=partition_size)[1:]
-#    partitions = np.split(indices, cutoffs)
-#    return partitions, len(partitions)
 
+def partition_indices(indices, partition_size):
+    """Given indices and partition size, partition indices into smaller chunks.
 
-def partition_indices(number_of_samples, partition_size):
-    """Given number of samples and partition size, generate list of partition indices.
+    Note that the relative ordering of the supplied indices are preserved 
+    by this function.
+
+    :param indices: list or numpy array of indices to partition.
+    :param partition_size: maximum size of each partition
 
     E.G.
-        number_of_samples = 10
+        indices = [0, 1, ... , 9]
         partition_size = 3
         return: [ [0,1,2], [3,4,5], [6,7,8], [9] ]
     """
-    assert partition_size <= number_of_samples
+    assert partition_size <= len(indices)
 
-    # index by 1, otherwise split operation yields a list with the first
-    # element as an empty list.
-    cutoffs = np.arange(start=0, stop=number_of_samples, step=partition_size)[1:]
-    indices = np.arange(number_of_samples)
+    # need to index by 1, otherwise split operation yields a list empty first element
+    cutoffs = np.arange(start=0, stop=len(indices), step=partition_size)[1:]
     partitions = np.split(indices, cutoffs)
     return partitions, len(partitions)
 
@@ -81,6 +67,13 @@ def write_object_to_disk(obj, path, logger=None):
 
     if logger:
         logger.info("\t Saved {}".format(path))
+
+def get_shuffled_indices(number_of_samples):
+    """Return shuffled indices given number of samples."""
+    indices = np.arange(number_of_samples)
+    np.random.shuffle(indices)
+    return indices
+
 
 
 def copy_data(source, destination, logger=None):

@@ -29,7 +29,7 @@ class TestUtilities(unittest.TestCase):
 
         # [0, 1, 2] -> [ [0, 1], [2] ]
         expected_indices = [np.array([0, 1]), np.array([2])]
-        actual_indices, _ = partition_indices(number_of_samples, partition_size)
+        actual_indices, _ = partition_indices(np.arange(number_of_samples), partition_size)
 
         self.assertEqual(len(actual_indices), len(expected_indices))
         for (ai, ei) in zip(actual_indices, expected_indices):

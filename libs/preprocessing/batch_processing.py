@@ -3,6 +3,7 @@
 #
 import collections
 from copy import deepcopy
+import numpy as np
 
 from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
@@ -41,7 +42,7 @@ def partition_and_annotate_data(sequences, labels, extractor, partition_size=100
         2-tuple (iterator to data_partition structs, total number of partitions)
     """
     number_of_samples = ensure_samples_match(sequences, labels)
-    index_partitions, total_partitions = partition_indices(number_of_samples, partition_size)
+    index_partitions, total_partitions = partition_indices(np.arange(number_of_samples), partition_size)
 
     return (AttentionPartition(indices=index_partition,
                                sequences=sequences[index_partition],

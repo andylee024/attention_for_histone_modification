@@ -1,14 +1,11 @@
 import tensorflow as tf
 import numpy as np
 
-from attention_configuration import AttentionConfiguration, LearningConfiguration
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Attention Model
-# ----------------------------------------------------------------------------------------------------------------------
+from attention_for_histone_modification.libs.model.attention_configuration import AttentionConfiguration, LearningConfiguration
+from attention_for_histone_modification.libs.model.abstract_model import AbstractTensorflowModel
 
 
-class AttentionModel(object):
+class AttentionModel(AbstractTensorflowModel):
 
     def __init__(self, attention_config, learning_config):
         """Initialize attention model.
@@ -27,6 +24,69 @@ class AttentionModel(object):
         # initialize LSTM for attention model
         self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
 
+    def predict(self, features, sequences):
+       """Compute predictions for attention model.
+
+       :param features: tf.placeholder populated with convolutional annotation vectors.
+       :param sequences: tf.placeholder populated with sequence data.
+       :return: logits corresponding to prediction.
+       """
+       # Get initial LSTM states for each sequence in batch (N x H)
+       memory_state, hidden_state = get_initial_lstm(features=features,
+                                                     model_config=self._model_config,
+                                                     learning_config=self._learning_config)
+
+       # Get hidden states for each sequence in batch (N x H)
+       for t in range(self._model_config.sequence_length):
+           with tf.variable_scope('update_lstm', reuse=(t != 0)):
+               _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
+                                                                state=[memory_state, hidden_state])
+
+       # Compute attention probabilities for each sequence in batch conditioned on hidden states (N x L)
+       attention_probabilities = compute_attention_probabilities(features=features,
+                                                                 hidden_state=hidden_state,
+                                                                 model_config=self._model_config,
+                                                                 learning_config=self._learning_config,
+                                                                 reuse=None)
+
+       # Select context based on attention probabilities.
+       context = select_context(features, attention_probabilities, model_config=self._model_config)  # (N x D)
+
+       # get logits
+       logits = decode_lstm(hidden_state=hidden_state,
+                            context=context,
+                            model_config=self._model_config,
+                            learning_config=self._learning_config,
+                            reuse=None)
+
+       return logits
+   
+    @property
+    def inputs(self):
+        """Return tf.placeholders for holding inputs of model.
+
+        :return:
+            Dictionary with following attributes.
+                "features"  :   placeholder of shape (batch_size, number_annotations, annotation_size)
+                "sequences" :   placeholder of shape (batch_size, sequence_length, vocabulary_size)
+        """
+        features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
+        sequences_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
+
+        return {'features'  : tf.placeholder(dtype=tf.float32, shape=features_shape),
+                'sequences' : tf.placeholder(dtype=tf.float32, shape=sequences_shape)}
+
+    @property
+    def outputs(self):
+        """Return tf.placeholders for holding outputs of model.
+
+        :return:
+            Dictionary with following attributes.
+                "labels" : placeholder of shape (batch_size, prediction_classes)
+        """
+        labels_shape = (None, self._model_config.prediction_classes)
+        return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape)}
+
     @staticmethod
     def _validate_attention_configuration(configuration):
         assert isinstance(configuration, AttentionConfiguration)
@@ -35,94 +95,11 @@ class AttentionModel(object):
     def _validate_learning_configuration(configuration):
         assert isinstance(configuration, LearningConfiguration)
 
-    def get_model_inputs(self):
-        """Initialize placeholder objects for tensorflow.
-
-        On each batch iteration, this dictionary must be populated with the data to be processed.
-
-        :return:
-            Dictionary of placeholder objects for holding raw data on each tensorflow batch iteration.
-        """
-        # specify dimensions for batch data
-        features_shape = (self._model_config.batch_size,
-                          self._model_config.number_of_annotations,
-                          self._model_config.annotation_size)
-
-        sequences_shape = (self._model_config.batch_size,
-                           self._model_config.sequence_length,
-                           self._model_config.vocabulary_size)
-
-        labels_shape = (self._model_config.batch_size, self._model_config.prediction_classes)
-
-        # create place holders
-        features = tf.placeholder(dtype=tf.float32, shape=features_shape)
-        sequences = tf.placeholder(dtype=tf.float32, shape=sequences_shape)
-        labels = tf.placeholder(dtype=tf.float32, shape=labels_shape)
-
-        return {'features': features, 'sequences': sequences, 'labels': labels}
-
-    def get_loss_op(self, model_inputs):
-        """Return loss for model.
-
-        :param model_inputs:
-            Dictionary containing model inputs populated with batch data.
-        :return:
-            Loss for batch iteration.
-        """
-        logits = self._compute_logits(features=model_inputs['features'],
-                                      sequences=model_inputs['sequences'])
-        total_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=model_inputs['labels']))
-
-        return total_loss / tf.to_float(self._model_config.batch_size)
-
-    def _compute_logits(self, features, sequences):
-        """Compute logits for a single batch iteration.
-
-        :param features:
-            Numpy array of size (L x D) representing convolutional annotation vectors.
-            See model configuration for details for definition of L and D.
-        :param sequences
-            Sequences corresponding to batch data.
-
-        :return:
-            Logits for each training example of batch.
-        """
-
-        # Get initial LSTM states for each sequence in batch (N x H)
-        memory_state, hidden_state = get_initial_lstm(features=features,
-                                                      model_config=self._model_config,
-                                                      learning_config=self._learning_config)
-
-        # Get hidden states for each sequence in batch (N x H)
-        for t in range(self._model_config.sequence_length):
-            with tf.variable_scope('update_lstm', reuse=(t != 0)):
-                _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
-                                                                 state=[memory_state, hidden_state])
-
-        # Compute attention probabilities for each sequence in batch conditioned on hidden states (N x L)
-        attention_probabilities = compute_attention_probabilities(features=features,
-                                                                  hidden_state=hidden_state,
-                                                                  model_config=self._model_config,
-                                                                  learning_config=self._learning_config,
-                                                                  reuse=None)
-
-        # Select context based on attention probabilities.
-        context = select_context(features, attention_probabilities, model_config=self._model_config)  # (N x D)
-
-        # get logits
-        logits = decode_lstm(hidden_state=hidden_state,
-                             context=context,
-                             model_config=self._model_config,
-                             learning_config=self._learning_config,
-                             reuse=None)
-
-        return logits
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Attention Layers
 # ----------------------------------------------------------------------------------------------------------------------
-
 
 def get_initial_lstm(features, model_config, learning_config):
     """Returns initial state of LSTM conditioned on CNN annotation features.

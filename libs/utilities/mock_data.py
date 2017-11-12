@@ -1,8 +1,9 @@
 import collections
 import numpy as np
 
-from attention_for_histone_modification.libs.preprocessing.attention_types import (
-    AttentionDataset, AttentionDatasetConfig, AttentionTrainingExample)
+from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
+        AttentionDataset, AttentionDatasetConfig)
+from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Mock data structures for ML
