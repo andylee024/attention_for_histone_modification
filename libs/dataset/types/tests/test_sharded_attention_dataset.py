@@ -57,7 +57,7 @@ class TestShardedAttentionDataset(unittest.TestCase):
 
         # check that correct training examples are retrieved
         valid_indices = [0, 1]
-        indexed_training_examples = self.sharded_attention_dataset.get_training_examples(valid_indices) 
+        indexed_training_examples = zip(valid_indices, self.sharded_attention_dataset.get_training_examples(valid_indices))
         for (idx, te) in indexed_training_examples:
             self.assertEqual(idx, te.label)
 

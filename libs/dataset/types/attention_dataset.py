@@ -51,7 +51,8 @@ class AttentionDataset(AbstractDataset):
         :return: List of 2-tuples of the form (index, training_example). 
         """
         _validate_indices(indices, self.config)
-        return [(index, self.get_training_example(index)) for index in indices]
+        #return [(index, self.get_training_example(index)) for index in indices] (old-implementation)
+        return [self.get_training_example(index) for index in indices]
 
 
 class AttentionDatasetConfig(object):

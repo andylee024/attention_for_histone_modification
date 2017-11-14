@@ -27,7 +27,7 @@ class TestAttentionDataset(unittest.TestCase):
         # method returns correct indices
         query_indices = [0, 1, 2]
         indexed_training_examples = self.dataset.get_training_examples(query_indices)
-        for (index, te) in indexed_training_examples:
+        for (index, te) in zip(query_indices, indexed_training_examples):
             self.assertEqual(index, te.label)
 
 if __name__ == '__main__':
