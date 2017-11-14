@@ -1,8 +1,8 @@
 
 import datetime
 
-from attention_for_histone_modification.libs.preprocessing.abstract_dataset import AbstractDataset
-from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
+from attention_for_histone_modification.libs.dataset.types.abstract_dataset import AbstractDataset
+from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
 
 
 """
@@ -12,7 +12,7 @@ An implementation of the abstract dataset for attention based models.
 |AbstractDataset <<interface>>|
 |-----------------------------|
     |
-    |-----<<implements>>-- AttentionDataset
+    |-----AttentionDataset <<implementation>>
 """
 
 class AttentionDataset(AbstractDataset):
@@ -51,7 +51,8 @@ class AttentionDataset(AbstractDataset):
         :return: List of 2-tuples of the form (index, training_example). 
         """
         _validate_indices(indices, self.config)
-        return [(index, self.get_training_example(index)) for index in indices]
+        #return [(index, self.get_training_example(index)) for index in indices] (old-implementation)
+        return [self.get_training_example(index) for index in indices]
 
 
 class AttentionDatasetConfig(object):

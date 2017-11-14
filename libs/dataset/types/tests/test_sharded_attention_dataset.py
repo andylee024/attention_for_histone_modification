@@ -5,11 +5,10 @@ import tempfile
 import unittest
 import os
 
-from attention_for_histone_modification.libs.preprocessing.sharded_attention_dataset import (
+from attention_for_histone_modification.libs.dataset.types.sharded_attention_dataset import (
         AttentionDatasetInfo, ShardedAttentionDataset)
-from attention_for_histone_modification.libs.preprocessing.utilities import (
-        remove_directory, write_object_to_disk)
-from attention_for_histone_modification.libs.preprocessing.tests.utilities_for_tests import (
+from attention_for_histone_modification.libs.utilities.io_utils import remove_directory, write_object_to_disk
+from attention_for_histone_modification.libs.dataset.types.tests.unittest_helpers import (
         create_single_example_dataset_with_label)
 
 class TestShardedAttentionDataset(unittest.TestCase):
@@ -58,7 +57,7 @@ class TestShardedAttentionDataset(unittest.TestCase):
 
         # check that correct training examples are retrieved
         valid_indices = [0, 1]
-        indexed_training_examples = self.sharded_attention_dataset.get_training_examples(valid_indices) 
+        indexed_training_examples = zip(valid_indices, self.sharded_attention_dataset.get_training_examples(valid_indices))
         for (idx, te) in indexed_training_examples:
             self.assertEqual(idx, te.label)
 

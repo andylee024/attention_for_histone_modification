@@ -1,21 +1,8 @@
-"""Configuration objects for attention model."""
-
-import tensorflow as tf
-
-
-class LearningConfiguration(object):
-    """Configuration object to initialize weights, biases for deep learning models."""
-
-    def __init__(self):
-        self.weight_initializer = tf.contrib.layers.xavier_initializer()
-        self.constant_initializer = tf.constant_initializer(0.0)
-
 
 class AttentionConfiguration(object):
     """Configuration object containing parameters to attention model."""
 
     def __init__(self,
-                 batch_size,
                  sequence_length,
                  vocabulary_size,
                  prediction_classes,
@@ -24,8 +11,6 @@ class AttentionConfiguration(object):
                  hidden_state_dimension):
         """Initialize configuration.
 
-        :param batch_size:
-            Int. Number of training examples in batch.
         :param sequence_length:
             Int. Number of characters in sequence corresponding to one training example.
         :param vocabulary_size:
@@ -39,7 +24,6 @@ class AttentionConfiguration(object):
         :param hidden_state_dimension:
             Number of hidden units in LSTM used for attention model.
         """
-        self.batch_size = batch_size
         self.sequence_length = sequence_length
         self.vocabulary_size = vocabulary_size
         self.prediction_classes = prediction_classes

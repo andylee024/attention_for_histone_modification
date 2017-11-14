@@ -5,7 +5,8 @@
 import numpy as np
 import unittest
 
-from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
+from attention_for_histone_modification.libs.dataset.preprocessing.extractor import (
+        AnnotationExtractor, get_trained_danq_model)
 
 # Configuration variables
 DANQ_WEIGHTS_FILE = '/Users/andy/Projects/biology/research/attention_for_histone_modification/data/danq_weights.hdf5'

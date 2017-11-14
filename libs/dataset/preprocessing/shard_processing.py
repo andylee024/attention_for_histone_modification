@@ -1,17 +1,17 @@
-#
-# Attention for Histone Modification
-#
 import collections
 from copy import deepcopy
+import numpy as np
 
-from attention_for_histone_modification.libs.preprocessing.attention_dataset import (
+from attention_for_histone_modification.libs.dataset.types.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
-from attention_for_histone_modification.libs.preprocessing.attention_training_example import AttentionTrainingExample
-from attention_for_histone_modification.libs.preprocessing.extractor import AnnotationExtractor, get_trained_danq_model
-from attention_for_histone_modification.libs.preprocessing.utilities import ensure_samples_match, partition_indices
+from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
+from attention_for_histone_modification.libs.dataset.preprocessing.extractor import (
+        AnnotationExtractor, get_trained_danq_model)
+from attention_for_histone_modification.libs.utilities.array_utils import ensure_samples_match, partition_indices
 
+"""Utilities for partitioning and processing raw data into sharded types."""
 
-"""Light-weight struct for carrying partitioned data.
+"""Light-weight struct containing partitioned data.
 
     Attributes:
         indices     : list of ints representing indices into original array on which subarrays are absed.
@@ -41,7 +41,7 @@ def partition_and_annotate_data(sequences, labels, extractor, partition_size=100
         2-tuple (iterator to data_partition structs, total number of partitions)
     """
     number_of_samples = ensure_samples_match(sequences, labels)
-    index_partitions, total_partitions = partition_indices(number_of_samples, partition_size)
+    index_partitions, total_partitions = partition_indices(np.arange(number_of_samples), partition_size)
 
     return (AttentionPartition(indices=index_partition,
                                sequences=sequences[index_partition],
@@ -65,7 +65,11 @@ def create_dataset_from_attention_partition(base_config, attention_partition):
 
 
 def generate_training_examples_from_attention_partition(attention_partition):
-    """Create list of training examples from attention_partition struct."""
+    """Create list of training examples from attention_partition struct.
+    
+    :param attention_partition: named tuple containing training example data
+    :return: list of attention training examples converted from attention partition
+    """
     return [AttentionTrainingExample(sequence=s, label=l, annotation=a)
             for (s, l, a) in zip(attention_partition.sequences,
                                  attention_partition.labels,
@@ -88,3 +92,4 @@ def convert_to_partition_dataset_config(base_config, attention_partition):
                                                                              end=attention_partition.indices[-1])
     updated_config.indices = attention_partition.indices
     return updated_config
+
