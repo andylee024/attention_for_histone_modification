@@ -5,10 +5,10 @@ import tempfile
 import unittest
 import os
 
-from attention_for_histone_modification.libs.dataset.types.sharded_attention_dataset import (
+from komorebi.libs.dataset.types.sharded_attention_dataset import (
         AttentionDatasetInfo, ShardedAttentionDataset)
-from attention_for_histone_modification.libs.utilities.io_utils import remove_directory, write_object_to_disk
-from attention_for_histone_modification.libs.dataset.types.tests.unittest_helpers import (
+from komorebi.libs.utilities.io_utils import remove_directory, write_object_to_disk
+from komorebi.libs.dataset.types.tests.unittest_helpers import (
         create_single_example_dataset_with_label)
 
 class TestShardedAttentionDataset(unittest.TestCase):

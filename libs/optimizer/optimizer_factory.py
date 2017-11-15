@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from attention_for_histone_modification.libs.optimizer.optimizer_config import OptimizerConfiguration
+from komorebi.libs.optimizer.optimizer_config import OptimizerConfiguration
 
 def create_tf_optimizer(optimizer_config):
     """Create tensorflow optimizer from config.

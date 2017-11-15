@@ -1,16 +1,16 @@
-from attention_for_histone_modification.libs.model.attention_configuration import AttentionConfiguration
-from attention_for_histone_modification.libs.model.attention_model import AttentionModel 
-from attention_for_histone_modification.libs.model.parameter_initialization import ParameterInitializationPolicy
-from attention_for_histone_modification.libs.optimizer.optimizer_config import OptimizerConfiguration
-from attention_for_histone_modification.libs.optimizer.optimizer_factory import create_tf_optimizer 
-from attention_for_histone_modification.libs.trainer.attention_trainer import AttentionTrainer
-from attention_for_histone_modification.libs.trainer.trainer_config import TrainerConfiguration
-from attention_for_histone_modification.libs.utilities.io_utils import load_pickle_object
+from komorebi.libs.model.attention_configuration import AttentionConfiguration
+from komorebi.libs.model.attention_model import AttentionModel 
+from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
+from komorebi.libs.optimizer.optimizer_config import OptimizerConfiguration
+from komorebi.libs.optimizer.optimizer_factory import create_tf_optimizer 
+from komorebi.libs.trainer.attention_trainer import AttentionTrainer
+from komorebi.libs.trainer.trainer_config import TrainerConfiguration
+from komorebi.libs.utilities.io_utils import load_pickle_object
 
 def main():
 
     # setup
-    dataset_path = "/Users/andy/Projects/biology/research/attention_for_histone_modification/data/attention_validation_dataset/sharded_attention_dataset.pkl"
+    dataset_path = "/Users/andy/Projects/biology/research/komorebi/data/attention_validation_dataset/sharded_attention_dataset.pkl"
     attention_config = AttentionConfiguration(sequence_length=1000,
                                               vocabulary_size=4,
                                               prediction_classes=919,

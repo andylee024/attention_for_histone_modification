@@ -11,16 +11,16 @@ import os
 import sys
 from tqdm import tqdm
 
-from attention_for_histone_modification.libs.dataset.preprocessing.shard_processing import (
+from komorebi.libs.dataset.preprocessing.shard_processing import (
         partition_and_annotate_data, create_dataset_from_attention_partition)
-from attention_for_histone_modification.libs.dataset.preprocessing.extractor import (
+from komorebi.libs.dataset.preprocessing.extractor import (
         AnnotationExtractor, get_trained_danq_model)
-from attention_for_histone_modification.libs.dataset.types.attention_dataset import (
+from komorebi.libs.dataset.types.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
-from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
-from attention_for_histone_modification.libs.dataset.types.sharded_attention_dataset import (
+from komorebi.libs.dataset.types.attention_training_example import AttentionTrainingExample
+from komorebi.libs.dataset.types.sharded_attention_dataset import (
         AttentionDatasetInfo, ShardedAttentionDataset)
-from attention_for_histone_modification.libs.utilities.io_utils import (
+from komorebi.libs.utilities.io_utils import (
         copy_data, load_pickle_object, remove_directory, write_object_to_disk)
 
 logging.basicConfig(format='%(asctime)s %(message)s')

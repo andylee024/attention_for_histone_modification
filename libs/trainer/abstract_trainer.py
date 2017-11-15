@@ -1,8 +1,8 @@
 import abc
 import tensorflow as tf
 
-from attention_for_histone_modification.libs.trainer.trainer_config import TrainerConfiguration
-from attention_for_histone_modification.libs.trainer.trainer_utils import batch_data
+from komorebi.libs.trainer.trainer_config import TrainerConfiguration
+from komorebi.libs.trainer.trainer_utils import batch_data
 
 class AbstractTrainer(object):
     """Abstract base class for model trainer."""

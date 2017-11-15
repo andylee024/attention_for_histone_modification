@@ -1,6 +1,6 @@
-from attention_for_histone_modification.libs.dataset.types.attention_dataset import (
+from komorebi.libs.dataset.types.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
-from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
+from komorebi.libs.dataset.types.attention_training_example import AttentionTrainingExample
 
 def create_single_example_dataset_with_label(label):
     """Create a dataset with a single training example with specified label.

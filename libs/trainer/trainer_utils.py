@@ -1,7 +1,7 @@
 """Utilities for trainer."""
 
-from attention_for_histone_modification.libs.dataset.types.abstract_dataset import AbstractDataset
-from attention_for_histone_modification.libs.utilities.array_utils import get_shuffled_indices, partition_indices
+from komorebi.libs.dataset.types.abstract_dataset import AbstractDataset
+from komorebi.libs.utilities.array_utils import get_shuffled_indices, partition_indices
 
 def batch_data(dataset, batch_size=100):
     """Create batches of training example for one epoch.
