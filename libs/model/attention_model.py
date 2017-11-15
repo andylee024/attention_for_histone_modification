@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
 
-from attention_for_histone_modification.libs.model.abstract_model import AbstractTensorflowModel
-from attention_for_histone_modification.libs.model.attention_configuration import AttentionConfiguration
-from attention_for_histone_modification.libs.model.parameter_initialization import ParameterInitializationPolicy
+from komorebi.libs.model.abstract_model import AbstractTensorflowModel
+from komorebi.libs.model.attention_configuration import AttentionConfiguration
+from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
 
 
 class AttentionModel(AbstractTensorflowModel):

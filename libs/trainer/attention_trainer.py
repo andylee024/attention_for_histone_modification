@@ -2,7 +2,7 @@ import collections
 import numpy as np
 import tensorflow as tf
 
-from attention_for_histone_modification.libs.trainer.abstract_trainer import AbstractTensorflowTrainer
+from komorebi.libs.trainer.abstract_trainer import AbstractTensorflowTrainer
 
 class AttentionTrainer(AbstractTensorflowTrainer):
     """Trainer implementation for training attention models."""

@@ -2,12 +2,12 @@ import collections
 from copy import deepcopy
 import numpy as np
 
-from attention_for_histone_modification.libs.dataset.types.attention_dataset import (
+from komorebi.libs.dataset.types.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
-from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
-from attention_for_histone_modification.libs.dataset.preprocessing.extractor import (
+from komorebi.libs.dataset.types.attention_training_example import AttentionTrainingExample
+from komorebi.libs.dataset.preprocessing.extractor import (
         AnnotationExtractor, get_trained_danq_model)
-from attention_for_histone_modification.libs.utilities.array_utils import ensure_samples_match, partition_indices
+from komorebi.libs.utilities.array_utils import ensure_samples_match, partition_indices
 
 """Utilities for partitioning and processing raw data into sharded types."""
 

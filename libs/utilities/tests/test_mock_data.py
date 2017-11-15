@@ -5,7 +5,7 @@
 import numpy as np
 import unittest
 
-from attention_for_histone_modification.libs.utilities.mock_data import *
+from komorebi.libs.utilities.mock_data import *
 
 
 # fixed constants for testing

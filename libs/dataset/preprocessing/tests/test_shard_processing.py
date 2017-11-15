@@ -5,17 +5,17 @@
 import numpy as np
 import unittest
 
-from attention_for_histone_modification.libs.dataset.preprocessing.shard_processing import (
+from komorebi.libs.dataset.preprocessing.shard_processing import (
         convert_to_partition_dataset_config, 
         generate_training_examples_from_attention_partition, 
         partition_and_annotate_data)
-from attention_for_histone_modification.libs.dataset.preprocessing.extractor import (
+from komorebi.libs.dataset.preprocessing.extractor import (
         AnnotationExtractor, get_trained_danq_model)
-from attention_for_histone_modification.libs.utilities.mock_data import (
+from komorebi.libs.utilities.mock_data import (
         create_dummy_dataset_config, create_dummy_sequence_batch, create_dummy_label_batch)
 
 # Configuration variables
-DANQ_WEIGHTS_FILE = '/Users/andy/Projects/biology/research/attention_for_histone_modification/data/danq_weights.hdf5'
+DANQ_WEIGHTS_FILE = '/Users/andy/Projects/biology/research/komorebi/data/danq_weights.hdf5'
 LAYER_NAME = 'dense_1'
 ANNOTATION_DIMENSION = 925
 

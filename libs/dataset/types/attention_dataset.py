@@ -1,8 +1,8 @@
 
 import datetime
 
-from attention_for_histone_modification.libs.dataset.types.abstract_dataset import AbstractDataset
-from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
+from komorebi.libs.dataset.types.abstract_dataset import AbstractDataset
+from komorebi.libs.dataset.types.attention_training_example import AttentionTrainingExample
 
 
 """

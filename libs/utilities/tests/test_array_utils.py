@@ -1,7 +1,7 @@
 import numpy as np
 import unittest
 
-from attention_for_histone_modification.libs.utilities.array_utils import ensure_samples_match, partition_indices
+from komorebi.libs.utilities.array_utils import ensure_samples_match, partition_indices
 
 class TestArrayUtils(unittest.TestCase):
     """Tests for array utils."""

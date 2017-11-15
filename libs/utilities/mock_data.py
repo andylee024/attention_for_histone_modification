@@ -1,9 +1,9 @@
 import collections
 import numpy as np
 
-from attention_for_histone_modification.libs.dataset.types.attention_dataset import (
+from komorebi.libs.dataset.types.attention_dataset import (
         AttentionDataset, AttentionDatasetConfig)
-from attention_for_histone_modification.libs.dataset.types.attention_training_example import AttentionTrainingExample
+from komorebi.libs.dataset.types.attention_training_example import AttentionTrainingExample
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Mock data structures for ML

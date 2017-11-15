@@ -5,8 +5,8 @@
 import collections
 from itertools import chain
 
-from attention_for_histone_modification.libs.dataset.types.abstract_dataset import AbstractDataset
-from attention_for_histone_modification.libs.utilities.io_utils import load_pickle_object
+from komorebi.libs.dataset.types.abstract_dataset import AbstractDataset
+from komorebi.libs.utilities.io_utils import load_pickle_object
 
 
 """
