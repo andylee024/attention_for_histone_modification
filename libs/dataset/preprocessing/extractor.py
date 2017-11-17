@@ -97,3 +97,9 @@ def _build_danq_model(numLabels=919, numConvFilters=320, poolingDropout=0.2, brn
     model.compile(loss='binary_crossentropy', optimizer=optim, metrics=['accuracy'])
     return model
 
+def main():
+    model = _build_danq_model()
+    print model.summary()
+
+if __name__ == "__main__":
+    main()
