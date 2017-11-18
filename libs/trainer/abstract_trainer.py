@@ -52,28 +52,12 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         with tf.Session() as sess:
             sess.run(init_op)
 
-            # debug code
-            from tensorflow.python import debug as tf_debug
-            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-            
             for _ in xrange(self.epochs):
                 training_batches = batch_data(dataset, batch_size=self.batch_size)
-                training_batch = training_batches.next()
-                _, loss = sess.run(
-                        fetches=[ops['train_op'], ops['loss_op']], 
-                        feed_dict=self._convert_training_examples_to_feed_dict(graph_inputs, training_batch))
-                
-
-
-            #for _ in xrange(self.epochs):
-            #    training_batches = batch_data(dataset, batch_size=self.batch_size)
-                #for idx, training_batch in enumerate(training_batches):
-                #    _, loss = sess.run(
-                #            fetches=[ops['train_op'], ops['loss_op']], 
-                #            feed_dict=self._convert_training_examples_to_feed_dict(graph_inputs, training_batch))
-                #    print "the loss for iteration {} = {}".format(idx, loss)
-
-                
+                for idx, training_batch in enumerate(training_batches):
+                   _, loss, p = sess.run(
+                           fetches=[ops['train_op'], ops['loss_op']], 
+                           feed_dict=self._convert_training_examples_to_feed_dict(graph_inputs, training_batch))
 
 
     @abc.abstractmethod

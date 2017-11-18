@@ -3,6 +3,7 @@ import numpy as np
 
 from komorebi.libs.model.abstract_model import AbstractTensorflowModel
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
+from komorebi.libs.model.model_return_types import AttentionModelReturn 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
 
 
@@ -25,40 +26,41 @@ class AttentionModel(AbstractTensorflowModel):
         self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
 
     def predict(self, features, sequences):
-       """Compute predictions for attention model.
+        """Compute predictions for attention model.
 
-       :param features: tf.placeholder populated with convolutional annotation vectors.
-       :param sequences: tf.placeholder populated with sequence data.
-       :return: logits corresponding to prediction.
-       """
-       # Get initial LSTM states for each sequence in batch (N x H)
-       memory_state, hidden_state = get_initial_lstm(features=features,
-                                                     model_config=self._model_config,
-                                                     parameter_policy=self._parameter_policy)
+        :param features: tf.placeholder populated with convolutional annotation vectors.
+        :param sequences: tf.placeholder populated with sequence data.
+        :return: attention return type
+        """
+        # Get initial LSTM states for each sequence in batch (N x H)
+        memory_state, hidden_state = get_initial_lstm(features=features,
+                                                      model_config=self._model_config,
+                                                      parameter_policy=self._parameter_policy)
 
-       # Get hidden states for each sequence in batch (N x H)
-       for t in range(self._model_config.sequence_length):
-           with tf.variable_scope('update_lstm', reuse=(t != 0)):
-               _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
-                                                                state=[memory_state, hidden_state])
+        # Get hidden states for each sequence in batch (N x H)
+        for t in range(self._model_config.sequence_length):
+            with tf.variable_scope('update_lstm', reuse=(t != 0)):
+                _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
+                                                                 state=[memory_state, hidden_state])
 
-       # Compute attention probabilities for each sequence in batch conditioned on hidden states (N x L)
-       attention_probabilities = compute_attention_probabilities(features=features,
-                                                                 hidden_state=hidden_state,
-                                                                 model_config=self._model_config,
-                                                                 parameter_policy=self._parameter_policy,
-                                                                 reuse=None)
+        # Compute context probabilities for each sequence in batch conditioned on hidden states (N x L)
+        context_probabilities = compute_context_probabilities(features=features,
+                                                              hidden_state=hidden_state,
+                                                              model_config=self._model_config,
+                                                              parameter_policy=self._parameter_policy,
+                                                              reuse=None)
 
-       # Select context based on attention probabilities.
-       context = select_context(features, attention_probabilities, model_config=self._model_config)  # (N x D)
+        # Select context based on attention probabilities.
+        context = select_context(features, context_probabilities, model_config=self._model_config)  # (N x D)
 
-       # get logits
-       logits = decode_lstm(hidden_state=hidden_state,
-                            context=context,
-                            model_config=self._model_config,
-                            parameter_policy=self._parameter_policy,
-                            reuse=None)
-       return logits
+        # get logits
+        logits = decode_lstm(hidden_state=hidden_state,
+                             context=context,
+                             model_config=self._model_config,
+                             parameter_policy=self._parameter_policy,
+                             reuse=None)
+
+        return AttentionModelReturn(predictions=logits, context_probabilities=context_probabilities)
    
     @property
     def inputs(self):
@@ -256,7 +258,7 @@ def process_attention_inputs(features, hidden_state, model_config, parameter_pol
     return projected_features, projected_h, bias
 
 
-def compute_attention_probabilities(features, hidden_state, model_config, parameter_policy, reuse=False):
+def compute_context_probabilities(features, hidden_state, model_config, parameter_policy, reuse=False):
     """Return attention probabilities.
 
     :param features:
@@ -301,11 +303,11 @@ def compute_attention_probabilities(features, hidden_state, model_config, parame
         attention_logits = tf.reshape(attention_logits, shape=attention_logits_shape)  # (N x L)
 
         # compute attention probabilities
-        attention_probabilities = tf.nn.softmax(attention_logits)  # (N x L)
-        return attention_probabilities
+        context_probabilities = tf.nn.softmax(attention_logits)  # (N x L)
+        return context_probabilities
 
 
-def select_context(features, attention_probabilities, model_config):
+def select_context(features, context_probabilities, model_config):
     """Select context vector from attention probabilities
 
     :param features:
@@ -313,12 +315,12 @@ def select_context(features, attention_probabilities, model_config):
             N = batch size
             L = number of annotation vectors per training sequence
             D = dimension of each annotation vector
-    :param attention_probabilities:
+    :param context_probabilities:
         (N x L) tensor of probabilities.
     :return:
         (N x D), where each row represents the context vector selected for ith example.
     """
-    selected_context_indices = tf.argmax(attention_probabilities, axis=1, output_type=tf.int32)
+    selected_context_indices = tf.argmax(context_probabilities, axis=1, output_type=tf.int32)
     gather_indices = convert_to_gather_indices(selected_context_indices, batch_size=get_batch_size(features))
     return tf.gather_nd(params=features, indices=gather_indices)
 

@@ -5,5 +5,5 @@
     "label_data": "/Users/andy/Projects/biology/research/komorebi/data/deepsea_valid_y.npy",
     "model_name": "DANQ",
     "model_weights": "/Users/andy/Projects/biology/research/komorebi/data/danq_weights.hdf5",
-    "model_layer": "dense_1"
+    "model_layer": "max_pooling1d_1"
 }

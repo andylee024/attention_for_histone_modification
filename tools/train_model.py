@@ -14,8 +14,8 @@ def main():
     attention_config = AttentionConfiguration(sequence_length=1000,
                                               vocabulary_size=4,
                                               prediction_classes=919,
-                                              number_of_annotations=1,
-                                              annotation_size=925,
+                                              number_of_annotations=75,
+                                              annotation_size=320,
                                               hidden_state_dimension=112)
     parameter_policy = ParameterInitializationPolicy()
     optimizer_config = OptimizerConfiguration(optimizer_type="adam", learning_rate=0.01)

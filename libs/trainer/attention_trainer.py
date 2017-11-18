@@ -4,6 +4,9 @@ import tensorflow as tf
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTensorflowTrainer
 
+TrainingTensor = collections.namedtuple(typename="TrainingTensor", 
+                                        field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
+
 class AttentionTrainer(AbstractTensorflowTrainer):
     """Trainer implementation for training attention models."""
 
@@ -20,10 +23,10 @@ class AttentionTrainer(AbstractTensorflowTrainer):
                         'sequences' : model.inputs['sequences'],
                         'labels'    : model.outputs['labels']}
     
-        predictions = model.predict(features=graph_inputs['features'], 
+        model_return = model.predict(features=graph_inputs['features'], 
                                     sequences=graph_inputs['sequences'])
     
-        loss_op = _get_loss_op(predictions=predictions, labels=graph_inputs['labels'])
+        loss_op = _get_loss_op(predictions=model_return.predictions, labels=graph_inputs['labels'])
         train_op = _get_train_op(loss_op=loss_op, optimizer=optimizer)
     
         ops = {'loss_op' : loss_op, 'train_op': train_op}
@@ -43,10 +46,6 @@ class AttentionTrainer(AbstractTensorflowTrainer):
                      graph_inputs['features']: training_tensor.annotation_tensor,
                      graph_inputs['labels']: training_tensor.label_tensor}
         return feed_dict
-
-
-TrainingTensor = collections.namedtuple(typename="TrainingTensor", 
-                                        field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
 
 
 def _get_loss_op(predictions, labels):
@@ -82,6 +81,6 @@ def _convert_to_training_tensor(training_examples):
     """
     sequence_tensor = np.concatenate([np.expand_dims(te.sequence, axis=0) for te in training_examples], axis=0)
     label_tensor = np.concatenate([np.expand_dims(te.label, axis=0) for te in training_examples], axis=0)
-    annotation_tensor = np.concatenate([np.reshape(te.annotation, (1, 1, te.annotation.size)) for te in training_examples], axis=0)
+    annotation_tensor = np.concatenate([np.expand_dims(te.annotation, axis=0) for te in training_examples], axis=0)
     return TrainingTensor(sequence_tensor=sequence_tensor, annotation_tensor=annotation_tensor, label_tensor=label_tensor)
 
