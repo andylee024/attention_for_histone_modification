@@ -1,8 +1,12 @@
 import abc
+import os
 import tensorflow as tf
 
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
 from komorebi.libs.trainer.trainer_utils import batch_data
+from komorebi.libs.utilities.io_utils import ensure_directory
+
+CHECKPOINT_DIRECTORY = "model_checkpoints"
 
 class AbstractTrainer(object):
     """Abstract base class for model trainer."""
@@ -29,8 +33,15 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         :param config: trainer_config object.
         """
         assert isinstance(config, TrainerConfiguration)
+        paths = _handle_directory_creation(config)
+
+        self.model_training_directory = paths['model_training_directory']
+        self.checkpoint_directory = paths['model_checkpoint_directory']
+        self.save_frequency = config.save_frequency
+
         self.epochs = config.epochs
         self.batch_size = config.batch_size
+
 
     def train_model(self, model, dataset, optimizer):
         """Train a model on a dataset.
@@ -44,20 +55,28 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         """
         graph_inputs, ops = self._build_computational_graph(model, optimizer)
 
-        ## initialize variables
+        # initialize variables
         init_op = tf.global_variables_initializer()
         tf.get_variable_scope().reuse_variables()
-
-        ## initialize session and start training
+        
+        # initialize saver 
+        saver = tf.train.Saver()
+        save_path = os.path.join(self.checkpoint_directory, "train_iteration")
+        
+        # initialize session and start training
         with tf.Session() as sess:
             sess.run(init_op)
 
-            for _ in xrange(self.epochs):
+            for epoch in xrange(self.epochs):
                 training_batches = batch_data(dataset, batch_size=self.batch_size)
                 for idx, training_batch in enumerate(training_batches):
-                   _, loss, p = sess.run(
+                   _, loss = sess.run(
                            fetches=[ops['train_op'], ops['loss_op']], 
                            feed_dict=self._convert_training_examples_to_feed_dict(graph_inputs, training_batch))
+                
+                if (epoch % self.save_frequency == 0):
+                    saver.save(sess=sess, save_path=save_path, global_step=epoch)
+                    print "saved: {}-{}".format(save_path, epoch)
 
 
     @abc.abstractmethod
@@ -87,4 +106,50 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
 
         
+def _handle_directory_creation(config):
+    """Handle directory creation for model training.
 
+    Create a model training directory structure as follows.
+
+    |-- save_directory
+        |-- model_name
+            |-- checkpoints
+    
+    :param config: trainer config
+    :return: dictionary holding created paths
+    """
+    model_training_directory = os.path.join(config.save_directory, config.name)
+    model_checkpoint_directory = os.path.join(model_training_directory, CHECKPOINT_DIRECTORY)
+
+    ensure_directory(config.save_directory)
+    ensure_directory(model_training_directory)
+    ensure_directory(model_checkpoint_directory)
+
+    return {'base_directory': os.path.abspath(config.save_directory), 
+            'model_training_directory': os.path.abspath(model_training_directory),
+            'model_checkpoint_directory': os.path.abspath(model_checkpoint_directory)}
+
+
+"""
+            # Create prediction signature
+            tensor_info_features = tf.saved_model.utils.build_tensor_info(graph_inputs['features'])
+            tensor_info_sequences = tf.saved_model.utils.build_tensor_info(graph_inputs['sequences'])
+            tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model.predict(graph_inputs['features'], graph_inputs['sequences']).predictions)
+
+            prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
+                    inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
+                    outputs={'predictions': tensor_info_predictions},
+                    method_name="prediction_signature")
+                
+            # Saving
+            import os
+            export_dir = os.path.join(self.save_directory, "final_save_model_directory")
+            builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
+            builder.add_meta_graph_and_variables(sess,
+                                                 ["tag"], 
+                                                 signature_def_map={"predict": prediction_signature})
+            builder.save()
+            print "saved final model"
+
+            /private/tmp/tf_checkpoints/final_save_model_directory/saved_model.pb
+"""

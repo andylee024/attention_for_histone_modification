@@ -72,7 +72,7 @@ def _get_train_op(optimizer, loss_op):
 
 
 def _convert_to_training_tensor(training_examples):
-    """Convert training examples to training tensor for tf model.
+    """Convert training examples to training tensor specific to attention model.
     
     :param training_examples:
         List of attention training examples.
