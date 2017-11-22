@@ -9,6 +9,7 @@ from komorebi.libs.utilities.io_utils import ensure_directory
 
 CHECKPOINT_DIRECTORY_NAME = "model_checkpoints"
 SUMMARY_DIRECTORY_NAME = "training_summaries"
+TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
 
 class AbstractTensorflowTrainer(AbstractTrainer):
     """Abstract base class to facilitate training models specific to tensorflow."""
@@ -22,6 +23,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         """
         assert isinstance(config, TrainerConfiguration)
         ensure_directory(config.experiment_directory)
+
+        self._experiment_directory = config.experiment_directory
         self._checkpoint_directory, self._summary_directory = _create_training_directories(
                 os.path.abspath(config.experiment_directory))
 
@@ -74,6 +77,11 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
                     print "saved: {}-{}".format(self.model_checkpoint_path, epoch)
 
+            # save trained model
+            _save_final_model(signature=_build_signature(graph_inputs, model), 
+                              experiment_directory=self._experiment_directory, 
+                              sess=sess)
+
 
     @abc.abstractmethod
     def _build_computational_graph(self, model, optimizer):
@@ -116,29 +124,29 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
        _, loss = sess.run(fetches=[ops['train_op'], ops['loss_op']], 
                           feed_dict=convert_training_examples(graph_inputs, training_batch))
 
-"""
-            # Create prediction signature
-            tensor_info_features = tf.saved_model.utils.build_tensor_info(graph_inputs['features'])
-            tensor_info_sequences = tf.saved_model.utils.build_tensor_info(graph_inputs['sequences'])
-            tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model.predict(graph_inputs['features'], graph_inputs['sequences']).predictions)
 
-            prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
-                    inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
-                    outputs={'predictions': tensor_info_predictions},
-                    method_name="prediction_signature")
-                
-            # Saving
-            import os
-            export_dir = os.path.join(self.save_directory, "final_save_model_directory")
-            builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
-            builder.add_meta_graph_and_variables(sess,
-                                                 ["tag"], 
-                                                 signature_def_map={"predict": prediction_signature})
-            builder.save()
-            print "saved final model"
+def _build_signature(graph_inputs, model):
+    """Build prediction signature."""
+    tensor_info_features = tf.saved_model.utils.build_tensor_info(graph_inputs['features'])
+    tensor_info_sequences = tf.saved_model.utils.build_tensor_info(graph_inputs['sequences'])
+    tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model.predict(graph_inputs['features'], graph_inputs['sequences']).predictions)
 
-            /private/tmp/tf_checkpoints/final_save_model_directory/saved_model.pb
-"""
+    prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
+            inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
+            outputs={'predictions': tensor_info_predictions},
+            method_name="prediction_signature")
+
+    return prediction_signature
+
+
+def _save_final_model(signature, experiment_directory, sess):
+    """Save the final model."""
+    trained_model_directory = os.path.join(experiment_directory, TRAINED_MODEL_DIRECTORY_NAME)
+    builder = tf.saved_model.builder.SavedModelBuilder(trained_model_directory)
+    builder.add_meta_graph_and_variables(sess, ["prediction_tag"], signature_def_map={"predict": signature})
+    model_path = builder.save()
+    print "saved {}".format(model_path)
+
 
 def _create_training_directories(experiment_directory):
     """Create directories for recording data from training procedure.
