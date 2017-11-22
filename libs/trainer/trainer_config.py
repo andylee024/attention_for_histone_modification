@@ -2,23 +2,21 @@
 class TrainerConfiguration(object):
     """Configuration object for trainer."""
 
-    def __init__(self, name, epochs, batch_size, save_directory, save_frequency):
-        """Initialize trainer config.
+    def __init__(self, 
+                 epochs, 
+                 batch_size, 
+                 experiment_directory, 
+                 checkpoint_frequency):
 
-        The trainer configuration specifies the training procedure, which encapsulates
-        aspects like training batch size as well as saving model checkpoints.
+        """Initialize trainer configuration.
        
-        :param name: name of training procedure
-        :param save_directory: directory where model checkpoints are saved
-        :param save_frequency: save after this many epochs
-
-        :param epochs: number of training epochs
-        :param batch_size: number of training examples to process per iteration
-        :param save_directory: location to save model
+        :param experiment_directory: directory where training results are stored
+        :param checkpoint_frequency: create model checkpoint after this many epochs
+        :param epochs: total training epochs
+        :param batch_size: number of training examples to process per iteration in epoch
         """
-        self.name = name
-        self.save_directory = save_directory
-        self.save_frequency = save_frequency
-
         self.epochs = epochs
         self.batch_size = batch_size
+        self.experiment_directory = experiment_directory
+        self.checkpoint_frequency = checkpoint_frequency
+

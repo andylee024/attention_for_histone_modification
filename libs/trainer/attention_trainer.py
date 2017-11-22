@@ -2,7 +2,7 @@ import collections
 import numpy as np
 import tensorflow as tf
 
-from komorebi.libs.trainer.abstract_trainer import AbstractTensorflowTrainer
+from komorebi.libs.trainer.abstract_tensorflow_trainer import AbstractTensorflowTrainer
 
 TrainingTensor = collections.namedtuple(typename="TrainingTensor", 
                                         field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])

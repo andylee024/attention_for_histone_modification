@@ -19,7 +19,10 @@ def main():
                                               hidden_state_dimension=112)
     parameter_policy = ParameterInitializationPolicy()
     optimizer_config = OptimizerConfiguration(optimizer_type="adam", learning_rate=0.01)
-    trainer_config = TrainerConfiguration(epochs=1, batch_size=2000, name="test_trainer", save_directory="/tmp", save_frequency=1)
+    trainer_config = TrainerConfiguration(epochs=1, 
+                                          batch_size=2000, 
+                                          experiment_directory="/tmp/tf_trainer_test", 
+                                          checkpoint_frequency=1)
 
     # create objects
     dataset = load_pickle_object(dataset_path)
