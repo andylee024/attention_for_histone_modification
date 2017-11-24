@@ -1,0 +1,10 @@
+{
+    "description": "Configuration options for attention model in tensorflow.", 
+    "model_type": "attention",
+    "sequence_length": 1000,
+    "vocabulary_size": 4,
+    "prediction_classes": 919,
+    "number_of_annotations": 75,
+    "annotation_size": 320,
+    "hidden_state_dimension": 112
+}
