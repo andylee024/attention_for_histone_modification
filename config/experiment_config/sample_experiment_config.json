@@ -1,6 +1,6 @@
 {
     "description": "Configuration file for machine learning experiment.", 
-    "experiment_name": "attention_for_histone_modification",
+    "experiment_name": "attention_experiment_test",
     "experiments_directory": "/tmp", 
     "dataset_config": "/Users/andy/Projects/biology/research/komorebi/config/dataset_config/validation_dataset_config.json",
     "model_config": "/Users/andy/Projects/biology/research/komorebi/config/model_config/attention_model_config.json",

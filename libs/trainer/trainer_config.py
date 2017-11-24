@@ -5,7 +5,6 @@ class TrainerConfiguration(object):
     def __init__(self, 
                  epochs, 
                  batch_size, 
-                 experiment_directory, 
                  checkpoint_frequency):
 
         """Initialize trainer configuration.
@@ -17,6 +16,5 @@ class TrainerConfiguration(object):
         """
         self.epochs = epochs
         self.batch_size = batch_size
-        self.experiment_directory = experiment_directory
         self.checkpoint_frequency = checkpoint_frequency
 

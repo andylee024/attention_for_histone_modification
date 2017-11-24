@@ -7,8 +7,6 @@ from komorebi.libs.trainer.trainer_config import TrainerConfiguration
 from komorebi.libs.trainer.trainer_utils import batch_data
 from komorebi.libs.utilities.io_utils import ensure_directory
 
-CHECKPOINT_DIRECTORY_NAME = "model_checkpoints"
-SUMMARY_DIRECTORY_NAME = "training_summaries"
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
 
 class AbstractTensorflowTrainer(AbstractTrainer):
@@ -16,22 +14,27 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config):
+    def __init__(self, config, experiment_directory, checkpoint_directory, summary_directory):
         """Initialize trainer.
         
         :param config: trainer_config object.
+        :param experiment_directory: directory corresponding to experiment
+        :param checkpont_directory: directory for storing model checkpoints
+        :param summary_directory: directory for storing tf summaries
         """
         assert isinstance(config, TrainerConfiguration)
-        ensure_directory(config.experiment_directory)
+        assert os.path.isdir(experiment_directory)
+        assert os.path.isdir(checkpoint_directory)
+        assert os.path.isdir(summary_directory)
 
-        self._experiment_directory = config.experiment_directory
-        self._checkpoint_directory, self._summary_directory = _create_training_directories(
-                os.path.abspath(config.experiment_directory))
+        self._experiment_directory = experiment_directory
+        self._checkpoint_directory = checkpoint_directory
+        self._summary_directory = summary_directory
 
         self.epochs = config.epochs
         self.batch_size = config.batch_size
         self.checkpoint_frequency = config.checkpoint_frequency
-        self.model_checkpoint_path = os.path.join(self._checkpoint_directory, "model_checkpoint") 
+        self.model_checkpoint_path = os.path.join(self._checkpoint_directory, "model-epoch-checkpoint") 
 
 
     def train_model(self, model, dataset, optimizer):
@@ -77,7 +80,6 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
-                    print "saved: {}-{}".format(self.model_checkpoint_path, epoch)
 
             # save trained model
             _save_trained_model(prediction_signature=model.prediction_signature, 
@@ -144,19 +146,4 @@ def _save_trained_model(prediction_signature, experiment_directory, sess):
                                          signature_def_map={"predict": prediction_signature})
     model_path = builder.save()
     print "saved {}".format(model_path)
-
-
-def _create_training_directories(experiment_directory):
-    """Create directories for recording data from training procedure.
-
-    :param experiment_directory: base experiment directory
-    :return: 
-        2-tuple (checkpoint_directory, summary_directory), where the checkpoint directory stores
-        model checkpoints and the summary directory stores tensorflow summary files.
-    """
-    checkpoint_directory = os.path.join(experiment_directory, CHECKPOINT_DIRECTORY_NAME)
-    summary_directory = os.path.join(experiment_directory, SUMMARY_DIRECTORY_NAME)
-    ensure_directory(checkpoint_directory)
-    ensure_directory(summary_directory)
-    return checkpoint_directory, summary_directory
 

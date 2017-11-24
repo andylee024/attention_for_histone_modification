@@ -3,7 +3,7 @@
     "optimizer": {
         "type": "adam", 
         "learning_rate": 0.01},
-    "epochs": 10,
+    "epochs": 1,
     "batch_size": 2000,
-    "checkpoint_frequency": 5
+    "checkpoint_frequency": 1 
 }

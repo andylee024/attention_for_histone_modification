@@ -80,7 +80,7 @@ def _get_summary_op(loss_op):
     """
     with tf.name_scope("summaries"):
         tf.summary.scalar("loss", loss_op)
-        tf.summary.histogram("histogram loss", loss_op)
+        tf.summary.histogram("histogram_loss", loss_op)
         return tf.summary.merge_all()
 
 
