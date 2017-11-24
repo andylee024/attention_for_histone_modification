@@ -74,3 +74,8 @@ def ensure_directory(path, logger=None):
         if logger:
             logger.info("\t created {}".format(directory))
 
+def validate_file(path):
+    """Validate that path is a file."""
+    if not os.path.isfile(path):
+        raise IOError("file does not exist {}").format(path)
+

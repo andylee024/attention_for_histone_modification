@@ -28,8 +28,9 @@ class AttentionTrainer(AbstractTensorflowTrainer):
     
         loss_op = _get_loss_op(predictions=model_return.predictions, labels=graph_inputs['labels'])
         train_op = _get_train_op(loss_op=loss_op, optimizer=optimizer)
+        summary_op = _get_summary_op(loss_op)
     
-        ops = {'loss_op' : loss_op, 'train_op': train_op}
+        ops = {'loss_op' : loss_op, 'train_op': train_op, 'summary_op': summary_op}
         return graph_inputs, ops
 
     def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples):
@@ -69,6 +70,18 @@ def _get_train_op(optimizer, loss_op):
     with tf.name_scope('optimizer'):
         train_op = optimizer.minimize(loss_op)
         return train_op
+
+
+def _get_summary_op(loss_op):
+    """Summarize training statistics.
+
+    :param loss_op: tensorflow loss op representing loss for which to compute gradients
+    :return: tensorflow summary op
+    """
+    with tf.name_scope("summaries"):
+        tf.summary.scalar("loss", loss_op)
+        tf.summary.histogram("histogram loss", loss_op)
+        return tf.summary.merge_all()
 
 
 def _convert_to_training_tensor(training_examples):

@@ -5,5 +5,6 @@
     "label_data": "/Users/andy/Projects/biology/research/komorebi/data/deepsea_valid_y.npy",
     "model_name": "DANQ",
     "model_weights": "/Users/andy/Projects/biology/research/komorebi/data/danq_weights.hdf5",
-    "model_layer": "max_pooling1d_1"
+    "model_layer": "max_pooling1d_1",
+    "dataset_path": "/Users/andy/Projects/biology/research/komorebi/data/attention_validation_dataset/sharded_attention_dataset.pkl"
 }

@@ -88,7 +88,26 @@ class AttentionModel(AbstractTensorflowModel):
         labels_shape = (None, self._model_config.prediction_classes)
         return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape)}
 
+    @property
+    def prediction_signature(self):
+        """Return prediction signature of model for serving.
+        
+        :return: tensorflow signature for prediction
+        """
+        model_return = self.predict(features=self.inputs['features'], 
+                                    sequences=self.inputs['sequences'])
 
+        tensor_info_features = tf.saved_model.utils.build_tensor_info(self.inputs['features'])
+        tensor_info_sequences = tf.saved_model.utils.build_tensor_info(self.inputs['sequences'])
+        tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model_return.predictions)
+        tensor_info_context_probabilities = tf.saved_model.utils.build_tensor_info(model_return.context_probabilities)
+
+        prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
+                inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
+                outputs={'predictions': tensor_info_predictions, 'contexts': tensor_info_context_probabilities},
+                method_name="attention_prediction_signature")
+        
+        return prediction_signature
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Attention Layers

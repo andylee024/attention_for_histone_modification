@@ -41,3 +41,8 @@ class AbstractTensorflowModel(AbstractModel):
     def outputs(self):
         """Return placeholder objects corresponding to tensorflow model outputs."""
         pass
+
+    @abc.abstractproperty
+    def prediction_signature(self):
+        """Return prediction signature of model."""
+        pass

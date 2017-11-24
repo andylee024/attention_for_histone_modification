@@ -58,6 +58,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         tf.get_variable_scope().reuse_variables()
 
         saver = tf.train.Saver()
+        writer = tf.summary.FileWriter(self._summary_directory)
         
         # initialize session and start training
         with tf.Session() as sess:
@@ -70,6 +71,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                              graph_inputs=graph_inputs,
                              ops=ops, 
                              convert_training_examples=self._convert_training_examples_to_feed_dict,
+                             writer=writer,
                              sess=sess)
 
                 # checkpoint saving 
@@ -78,9 +80,9 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                     print "saved: {}-{}".format(self.model_checkpoint_path, epoch)
 
             # save trained model
-            _save_final_model(signature=_build_signature(graph_inputs, model), 
-                              experiment_directory=self._experiment_directory, 
-                              sess=sess)
+            _save_trained_model(prediction_signature=model.prediction_signature, 
+                                experiment_directory=self._experiment_directory, 
+                                sess=sess)
 
 
     @abc.abstractmethod
@@ -109,7 +111,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, sess):
+def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -117,33 +119,29 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param batch_size: size of each batch in iteration
     :param ops: dictionary of ops from computational graph
     :param convert_training_examples: function to convert training examples to feed dict.
+    :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
     training_batches = batch_data(dataset, batch_size=batch_size)
     for idx, training_batch in enumerate(training_batches):
-       _, loss = sess.run(fetches=[ops['train_op'], ops['loss_op']], 
+       _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
                           feed_dict=convert_training_examples(graph_inputs, training_batch))
+       writer.add_summary(summary)
 
 
-def _build_signature(graph_inputs, model):
-    """Build prediction signature."""
-    tensor_info_features = tf.saved_model.utils.build_tensor_info(graph_inputs['features'])
-    tensor_info_sequences = tf.saved_model.utils.build_tensor_info(graph_inputs['sequences'])
-    tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model.predict(graph_inputs['features'], graph_inputs['sequences']).predictions)
 
-    prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
-            inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
-            outputs={'predictions': tensor_info_predictions},
-            method_name="prediction_signature")
-
-    return prediction_signature
-
-
-def _save_final_model(signature, experiment_directory, sess):
-    """Save the final model."""
+def _save_trained_model(prediction_signature, experiment_directory, sess):
+    """Save the final model.
+    
+    :param prediction_signature: tensorflow signature of graph specific to prediction
+    :param experiment_directory: directory to save final model
+    :param sess: tensorflow session
+    """
     trained_model_directory = os.path.join(experiment_directory, TRAINED_MODEL_DIRECTORY_NAME)
     builder = tf.saved_model.builder.SavedModelBuilder(trained_model_directory)
-    builder.add_meta_graph_and_variables(sess, ["prediction_tag"], signature_def_map={"predict": signature})
+    builder.add_meta_graph_and_variables(sess=sess, 
+                                         tags=[tf.saved_model.tag_constants.SERVING],
+                                         signature_def_map={"predict": prediction_signature})
     model_path = builder.save()
     print "saved {}".format(model_path)
 
