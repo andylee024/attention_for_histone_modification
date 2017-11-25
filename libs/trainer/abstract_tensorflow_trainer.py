@@ -1,6 +1,7 @@
 import abc
 import os
 import tensorflow as tf
+from tqdm import tqdm, trange
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
@@ -66,7 +67,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         # initialize session and start training
         with tf.Session() as sess:
             sess.run(init_op)
-            for epoch in xrange(self.epochs):
+            for epoch in trange(self.epochs, desc="epoch progress"):
                 
                 # training
                 _train_epoch(dataset=dataset,
@@ -124,8 +125,8 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
-    training_batches = batch_data(dataset, batch_size=batch_size)
-    for idx, training_batch in enumerate(training_batches):
+    training_batches, total_batches = batch_data(dataset, batch_size=batch_size)
+    for training_batch in tqdm(training_batches, desc= "\t iteration progress", total=total_batches):
        _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
                           feed_dict=convert_training_examples(graph_inputs, training_batch))
        writer.add_summary(summary)
