@@ -150,19 +150,25 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
+    count = 0
     training_batches, total_batches = batch_data(dataset, batch_size=batch_size)
     for training_batch in tqdm(training_batches, desc= "\t iteration progress", total=total_batches):
         train_ts = time.time()
         _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
                            feed_dict=convert_training_examples(graph_inputs, training_batch, CONVERT_TIMES))
         train_te = time.time()
-        print "training_iteration_time : {}".format(train_te - train_ts)
         TRAIN_TIMES.append(train_te - train_ts)
 
         summary_ts = time.time()
         writer.add_summary(summary)
         summary_te = time.time()
         SUMMARY_TIMES.append(summary_te - summary_ts)
+        count += 1
+        
+        print "iteration stats for iteration {} \n".format(count)
+        print "TRAIN_TIME : {}".format(TRAIN_TIMES[-1])
+        print "SUMMARY_TIME : {}".format(SUMMARY_TIMES[-1])
+        print "CONVERT_TIME : {}".format(CONVERT_TIMES[-1])
 
 
 def _save_trained_model(prediction_signature, experiment_directory, sess):
