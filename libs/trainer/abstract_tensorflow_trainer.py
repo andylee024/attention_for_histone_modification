@@ -154,7 +154,7 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param sess: tensorflow session
     """
     count = 0
-    training_batches, total_batches = batch_data(dataset, batch_size=batch_size)
+    training_batches, total_batches = batch_data(dataset, logger, batch_size=batch_size)
     for training_batch in tqdm(training_batches, desc= "\t iteration progress", total=total_batches):
         train_ts = time.time()
         _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
