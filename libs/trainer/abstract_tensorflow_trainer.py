@@ -48,7 +48,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         self.model_checkpoint_path = os.path.join(self._checkpoint_directory, "model-epoch-checkpoint") 
 
 
-    def train_model(self, model, dataset, optimizer):
+    def train_model(self, model, dataset, optimizer, logger):
         """Training procedure for a tensorflow model.
 
         This is a generic training procedure for a tensorflow model. Specifically, it 
@@ -63,6 +63,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         
         :param model: model object satisfying abstract model interface
         :param dataset: dataset object satisfying abstract dataset interface
+        :param optimizer: tf optimizer object
+        :param logger: logging object
         """
         # build computational model
         graph_inputs, ops = self._build_computational_graph(model, optimizer)
@@ -87,7 +89,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                              convert_training_examples=self._convert_training_examples_to_feed_dict,
                              writer=writer,
                              sess=sess,
-                             CONVERT_TIMES=CONVERT_TIMES)
+                             CONVERT_TIMES=CONVERT_TIMES,
+                             logger=logger)
 
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
@@ -139,7 +142,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess, CONVERT_TIMES):
+def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess, CONVERT_TIMES, logger):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -165,10 +168,10 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
         SUMMARY_TIMES.append(summary_te - summary_ts)
         count += 1
         
-        print "iteration stats for iteration {} \n".format(count)
-        print "TRAIN_TIME : {}".format(TRAIN_TIMES[-1])
-        print "SUMMARY_TIME : {}".format(SUMMARY_TIMES[-1])
-        print "CONVERT_TIME : {}".format(CONVERT_TIMES[-1])
+        logger.info("iteration stats for iteration {} \n".format(count))
+        logger.info("TRAIN_TIME : {}".format(TRAIN_TIMES[-1]))
+        logger.info("SUMMARY_TIME : {}".format(SUMMARY_TIMES[-1]))
+        logger.info("CONVERT_TIME : {}".format(CONVERT_TIMES[-1]))
 
 
 def _save_trained_model(prediction_signature, experiment_directory, sess):
