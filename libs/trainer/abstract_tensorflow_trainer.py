@@ -3,12 +3,22 @@ import os
 import tensorflow as tf
 from tqdm import tqdm, trange
 
+import numpy as np
+import time
+
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
 from komorebi.libs.trainer.trainer_utils import batch_data
 from komorebi.libs.utilities.io_utils import ensure_directory
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
+
+# training times for each iteration
+TRAIN_TIMES = []
+SUMMARY_TIMES = []
+SAVE_TIMES = []
+CONVERT_TIMES = []
+
 
 class AbstractTensorflowTrainer(AbstractTrainer):
     """Abstract base class to facilitate training models specific to tensorflow."""
@@ -76,16 +86,31 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                              ops=ops, 
                              convert_training_examples=self._convert_training_examples_to_feed_dict,
                              writer=writer,
-                             sess=sess)
+                             sess=sess,
+                             CONVERT_TIMES=CONVERT_TIMES)
 
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
+                    save_ts = time.time()
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
+                    save_te = time.time()
+                    SAVE_TIMES.append(save_te - save_ts)
 
             # save trained model
             _save_trained_model(prediction_signature=model.prediction_signature, 
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
+
+        print "TRAIN_TIMES: {}".format(TRAIN_TIMES)
+        print "SUMMARY_TIMES: {}".format(SUMMARY_TIMES)
+        print "CONVERT_TIMES: {}".format(CONVERT_TIMES)
+        print "SAVE_TIMES: {}".format(SAVE_TIMES)
+        print "\n"
+
+        print "TRAIN_TIMES_AVG: {}".format(np.mean(TRAIN_TIMES))
+        print "SUMMARY_TIMES_AVG: {}".format(np.mean(SUMMARY_TIMES))
+        print "CONVERT_TIMES_AVG: {}".format(np.mean(CONVERT_TIMES))
+        print "SAVE_TIMES_AVG: {}".format(np.mean(SAVE_TIMES))
 
 
     @abc.abstractmethod
@@ -102,7 +127,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
 
     @abc.abstractmethod
-    def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples):
+    def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples, CONVERT_TIMES):
         """Convert training inputs to graph inputs.
 
         Tensorflow models rely on passing a feed_dict into the computational graph.
@@ -114,7 +139,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess):
+def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess, CONVERT_TIMES):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -127,10 +152,17 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     """
     training_batches, total_batches = batch_data(dataset, batch_size=batch_size)
     for training_batch in tqdm(training_batches, desc= "\t iteration progress", total=total_batches):
-       _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
-                          feed_dict=convert_training_examples(graph_inputs, training_batch))
-       writer.add_summary(summary)
+        train_ts = time.time()
+        _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
+                           feed_dict=convert_training_examples(graph_inputs, training_batch, CONVERT_TIMES))
+        train_te = time.time()
+        print "training_iteration_time : {}".format(train_te - train_ts)
+        TRAIN_TIMES.append(train_te - train_ts)
 
+        summary_ts = time.time()
+        writer.add_summary(summary)
+        summary_te = time.time()
+        SUMMARY_TIMES.append(summary_te - summary_ts)
 
 
 def _save_trained_model(prediction_signature, experiment_directory, sess):

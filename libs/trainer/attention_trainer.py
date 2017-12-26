@@ -1,6 +1,7 @@
 import collections
 import numpy as np
 import tensorflow as tf
+import time 
 
 from komorebi.libs.trainer.abstract_tensorflow_trainer import AbstractTensorflowTrainer
 
@@ -33,7 +34,7 @@ class AttentionTrainer(AbstractTensorflowTrainer):
         ops = {'loss_op' : loss_op, 'train_op': train_op, 'summary_op': summary_op}
         return graph_inputs, ops
 
-    def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples):
+    def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples, CONVERT_TIMES):
         """Convert training inputs to graph inputs.
 
         Tensorflow models rely on passing a feed_dict into the computational graph.
@@ -42,10 +43,13 @@ class AttentionTrainer(AbstractTensorflowTrainer):
         :param graph_inputs: dictionary mapping from string key to tf.placeholders
         :param training_examples: training example types specific to dataset.
         """
+        convert_ts = time.time()
         training_tensor = _convert_to_training_tensor(training_examples)
         feed_dict = {graph_inputs['sequences']: training_tensor.sequence_tensor,
                      graph_inputs['features']: training_tensor.annotation_tensor,
                      graph_inputs['labels']: training_tensor.label_tensor}
+        convert_te = time.time()
+        CONVERT_TIMES.append(convert_te - convert_ts)
         return feed_dict
 
 

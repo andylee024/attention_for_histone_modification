@@ -8,6 +8,7 @@ from itertools import chain
 from komorebi.libs.dataset.types.abstract_dataset import AbstractDataset
 from komorebi.libs.utilities.io_utils import load_pickle_object
 
+from profilehooks import profile
 
 """
 A sharded implementation of the attention dataset class.
@@ -43,7 +44,8 @@ class ShardedAttentionDataset(AbstractDataset):
         :return: training example for query index.
         """
         return _deserialize_training_example_from_dataset(self.index_to_dataset[index], index)
-
+    
+    @profile
     def get_training_examples(self, indices):
         """Get training examples corresponding to supplied indices.
 
