@@ -98,7 +98,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                 sess.run(iterator.initializer, {filenames_op: tf_record_paths})
 
                 # training
-                _train_epoch(dataset=tf_dataset,
+                _train_epoch(iterator=iterator,
                              batch_size=self.batch_size,
                              graph_inputs=graph_inputs,
                              ops=ops, 
@@ -128,7 +128,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-def _train_epoch(dataset, batch_size, graph_inputs, ops, writer, sess):
+def _train_epoch(iterator, batch_size, graph_inputs, ops, writer, sess):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -142,15 +142,15 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, writer, sess):
     count = 0
     while True:
         try:
-            data = dataset.get_next()
+            data = sess.run(iterator.get_next())
 
             # populate data placeholders
-            graph_inputs['sequences'] = data['sequence']
-            graph_inputs['features'] = data['annotation']
-            graph_inputs['labels'] = data['label']
+            feed_dict = {graph_inputs['sequences']: data['sequence'],
+                         graph_inputs['features']: data['annotation'],
+                         graph_inputs['labels']: data['label']}
 
             _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
-                               feed_dict=graph_inputs)
+                               feed_dict=feed_dict)
 
             print "current loss for iteration {} is {}".format(count, loss)
             count += 1
