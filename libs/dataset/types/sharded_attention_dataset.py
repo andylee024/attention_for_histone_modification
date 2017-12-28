@@ -8,7 +8,7 @@ from itertools import chain
 from komorebi.libs.dataset.types.abstract_dataset import AbstractDataset
 from komorebi.libs.utilities.io_utils import load_pickle_object
 
-import time
+
 """
 A sharded implementation of the attention dataset class.
 
@@ -26,7 +26,7 @@ class ShardedAttentionDataset(AbstractDataset):
     without having to load all datasets into memory at once.
     """
 
-    def __init__(self, index_to_dataset, logger):
+    def __init__(self, index_to_dataset):
         """Initialize sharded attention dataset.
 
         :param index_to_dataset:
@@ -35,8 +35,6 @@ class ShardedAttentionDataset(AbstractDataset):
         """
         self.index_to_dataset = index_to_dataset
         self.total_examples = len(index_to_dataset)
-        self.dataset_times = []
-        self.logger = logger
 
     def get_training_example(self, index):
         """Get training example for query index.
@@ -45,7 +43,7 @@ class ShardedAttentionDataset(AbstractDataset):
         :return: training example for query index.
         """
         return _deserialize_training_example_from_dataset(self.index_to_dataset[index], index)
-    
+
     def get_training_examples(self, indices):
         """Get training examples corresponding to supplied indices.
 
