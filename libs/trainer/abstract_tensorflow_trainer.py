@@ -3,6 +3,7 @@ import numpy as np
 import os
 import tensorflow as tf
 from tqdm import tqdm, trange
+import time
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
@@ -12,6 +13,8 @@ from komorebi.libs.utilities.io_utils import ensure_directory
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
 SEQUENCE_SHAPE = (1000, 4)
 ANNOTATION_SHAPE = (75, 320)
+
+ITERATION_TIMES = []
 
 class AbstractTensorflowTrainer(AbstractTrainer):
     """Abstract base class to facilitate training models specific to tensorflow."""
@@ -93,6 +96,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
             sess.run(init_op)
             for epoch in trange(self.epochs, desc="epoch progress"):
 
+                epoch_ts = time.time()
                 # shuffle all examples and reinitialize dataset (out of memory shuffling)
                 np.random.shuffle(tf_record_paths)
                 sess.run(iterator.initializer, {filenames_op: tf_record_paths})
@@ -108,12 +112,19 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
+                epoch_te = time.time()
+                epoch_time = epoch_te - epoch_ts
+                EPOCH_TIMES.append(epoch_time)
+
 
             # save trained model
             _save_trained_model(prediction_signature=model.prediction_signature, 
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
 
+        print "batch_size : {}".format(self.batch_size)
+        print "average iteration time: {}".format(np.mean(ITERATION_TIMES))
+        print "average epoch time: {}".format(np.mean(EPOCH_TIMES))
 
     @abc.abstractmethod
     def _build_computational_graph(self, model, optimizer):
@@ -142,6 +153,7 @@ def _train_epoch(iterator, batch_size, graph_inputs, ops, writer, sess):
     count = 0
     while True:
         try:
+            iteration_ts = time.time()
             data = sess.run(iterator.get_next())
 
             # populate data placeholders
@@ -151,8 +163,12 @@ def _train_epoch(iterator, batch_size, graph_inputs, ops, writer, sess):
 
             _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
                                feed_dict=feed_dict)
+            iteration_te = time.time()
+            iter_time = iteration_te - iteration_ts
 
-            print "current loss for iteration {} is {}".format(count, loss)
+            print "time for iteration {} : {}".format(count, iter_time)
+            print "loss for iteration {} : {}".format(count, loss)
+            ITERATION_TIMES.append(iter_time)
             count += 1
 
             writer.add_summary(summary)
