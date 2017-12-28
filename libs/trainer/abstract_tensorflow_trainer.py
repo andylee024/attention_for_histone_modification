@@ -1,4 +1,5 @@
 import abc
+import numpy as np
 import os
 import tensorflow as tf
 from tqdm import tqdm, trange
@@ -9,6 +10,8 @@ from komorebi.libs.trainer.trainer_utils import batch_data
 from komorebi.libs.utilities.io_utils import ensure_directory
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
+SEQUENCE_SHAPE = (1000, 4)
+ANNOTATION_SHAPE = (75, 320)
 
 class AbstractTensorflowTrainer(AbstractTrainer):
     """Abstract base class to facilitate training models specific to tensorflow."""
@@ -54,6 +57,26 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         :param model: model object satisfying abstract model interface
         :param dataset: dataset object satisfying abstract dataset interface
         """
+        ##################
+        # add dataset ops
+        ##################
+
+        # get paths to tf records
+        tf_dataset_directory = "/Users/andy/Projects/biology/research/komorebi/data/attention_validation_tf_dataset"
+        tf_record_paths = [os.path.join(tf_dataset_directory, tf_record) for tf_record in os.listdir(tf_dataset_directory)]
+        buffer_size = 5000
+
+        # setup new computational graph
+        filenames_op = tf.placeholder(tf.string, shape=[None])
+        tf_dataset = tf.data.TFRecordDataset(filenames_op)
+        tf_dataset = tf_dataset.prefetch(buffer_size)
+        tf_dataset = tf_dataset.map(parse_example, num_parallel_calls=6)
+        tf_dataset = tf_dataset.batch(self.batch_size)
+        iterator = tf_dataset.make_initializable_iterator()
+        
+        #
+        # ORIGINAL CODE
+        # 
         # build computational model
         graph_inputs, ops = self._build_computational_graph(model, optimizer)
 
@@ -66,15 +89,19 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         
         # initialize session and start training
         with tf.Session() as sess:
+            # session starts here
             sess.run(init_op)
             for epoch in trange(self.epochs, desc="epoch progress"):
-                
+
+                # shuffle all examples and reinitialize dataset (out of memory shuffling)
+                np.random.shuffle(tf_record_paths)
+                sess.run(iterator.initializer, {filenames_op: tf_record_paths})
+
                 # training
-                _train_epoch(dataset=dataset,
+                _train_epoch(dataset=tf_dataset,
                              batch_size=self.batch_size,
                              graph_inputs=graph_inputs,
                              ops=ops, 
-                             convert_training_examples=self._convert_training_examples_to_feed_dict,
                              writer=writer,
                              sess=sess)
 
@@ -101,20 +128,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-    @abc.abstractmethod
-    def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples):
-        """Convert training inputs to graph inputs.
-
-        Tensorflow models rely on passing a feed_dict into the computational graph.
-        This function is responsible for translating the training examples into graph inputs.
-
-        :param graph_inputs: dictionary mapping from string key to tf.placeholders
-        :param training_examples: training example types specific to dataset.
-        """
-        pass
-
-
-def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess):
+def _train_epoch(dataset, batch_size, graph_inputs, ops, writer, sess):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -125,12 +139,26 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
-    training_batches, total_batches = batch_data(dataset, batch_size=batch_size)
-    for training_batch in tqdm(training_batches, desc= "\t iteration progress", total=total_batches):
-       _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
-                          feed_dict=convert_training_examples(graph_inputs, training_batch))
-       writer.add_summary(summary)
+    count = 0
+    while True:
+        try:
+            data = dataset.get_next()
 
+            # populate data placeholders
+            graph_inputs['sequences'] = data['sequence']
+            graph_inputs['features'] = data['annotation']
+            graph_inputs['labels'] = data['label']
+
+            _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
+                               feed_dict=graph_inputs)
+
+            print "current loss for iteration {} is {}".format(count, loss)
+            count += 1
+
+            writer.add_summary(summary)
+
+        except tf.errors.OutOfRangeError:
+            return
 
 
 def _save_trained_model(prediction_signature, experiment_directory, sess):
@@ -147,4 +175,24 @@ def _save_trained_model(prediction_signature, experiment_directory, sess):
                                          signature_def_map={"predict": prediction_signature})
     model_path = builder.save()
     print "saved {}".format(model_path)
+
+
+def parse_example(tf_example):
+    """Parse tensorflow example"""
+    
+    features_map = {
+        'sequence_raw': tf.FixedLenFeature([], tf.string),
+        'label_raw': tf.FixedLenFeature([], tf.string),
+        'annotation_raw': tf.FixedLenFeature([], tf.string)}
+    
+    parsed_example = tf.parse_single_example(tf_example, features_map)
+    
+    sequence_raw = tf.decode_raw(parsed_example['sequence_raw'], tf.uint8)
+    annotation_raw = tf.decode_raw(parsed_example['annotation_raw'], tf.float32)
+    
+    sequence = tf.reshape(sequence_raw, SEQUENCE_SHAPE)
+    label = tf.decode_raw(parsed_example['label_raw'], tf.uint8)
+    annotation = tf.reshape(annotation_raw, ANNOTATION_SHAPE)
+    
+    return {'sequence': sequence, 'label': label, 'annotation': annotation}
 
