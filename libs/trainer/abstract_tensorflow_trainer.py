@@ -15,6 +15,7 @@ SEQUENCE_SHAPE = (1000, 4)
 ANNOTATION_SHAPE = (75, 320)
 
 ITERATION_TIMES = []
+EPOCH_TIMES = []
 
 class AbstractTensorflowTrainer(AbstractTrainer):
     """Abstract base class to facilitate training models specific to tensorflow."""
