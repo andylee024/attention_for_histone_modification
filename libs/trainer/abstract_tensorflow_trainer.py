@@ -153,9 +153,20 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
-    count = 0
+    # count = 0
     training_batches, total_batches = batch_data(dataset, logger, batch_size=batch_size)
-    for training_batch in tqdm(training_batches, desc= "\t iteration progress", total=total_batches):
+
+    # setup tensorflow dataset
+    TF_VALIDATION_DATASET = "/tmp/validation_dataset.tfrecord"
+    filenames = [TF_VALIDATION_DATASET]
+    tf_dataset = tf.data.TFRecordDataset(filenames)
+    tf_dataset = tf_dataset.map(parse_example, num_threads=6, output_buffer_size=250)
+    batched_dataset = tf_dataset.batch(batch_size)
+    batched_iter = batched_dataset.make_one_shot_iterator()
+
+    for training_batch in tqdm(batched_iter, desc= "\t iteration progress", total=total_batches):
+        batched_next = batched_iter.get_next()
+
         train_ts = time.time()
         _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
                            feed_dict=convert_training_examples(graph_inputs, training_batch, CONVERT_TIMES))
