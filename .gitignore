@@ -107,3 +107,4 @@ venv.bak/
 *.idea
 *.ipynb
 *.hdf5
+*.swp
