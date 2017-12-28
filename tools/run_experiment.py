@@ -52,7 +52,7 @@ def main(args):
     trainer = _load_trainer(experiment_config)
 
     # train model
-    trainer.train_model(dataset=dataset, model=model, optimizer=optimizer, logger=logger)
+    trainer.train_model(dataset=dataset, model=model, optimizer=optimizer)
 
 # ----------------------------------------------------------------
 # Helpers for setting up experiment
