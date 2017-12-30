@@ -5,7 +5,7 @@ from tqdm import tqdm, trange
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
-from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_dataset_iterator_for_epoch
+from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_data_stream_for_epoch
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
 
@@ -129,10 +129,10 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param sess: tensorflow session
     """
     total_iterations = compute_number_of_batches(dataset, batch_size)
-    dataset_iterator = get_dataset_iterator_for_epoch(dataset, sess)
+    data_stream_op = get_data_stream_for_epoch(dataset, sess)
 
     for iteration_number in tqdm(range(total_iterations), desc="\t iteration_progress"):
-        _train_iteration(dataset_iterator=dataset_iterator, 
+        _train_iteration(data_stream_op=data_stream_op, 
                          graph_inputs=graph_inputs, 
                          ops=ops, 
                          convert_training_examples=convert_training_examples, 
@@ -140,10 +140,10 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
                          sess=sess)
 
 
-def _train_iteration(dataset_iterator, graph_inputs, ops, convert_training_examples, writer, sess):
+def _train_iteration(data_stream_op, graph_inputs, ops, convert_training_examples, writer, sess):
     """Train a single iteration of model.
     
-    :param dataset_iterator: dataset iterator for batch data
+    :param data_stream_op: tensorflow op to retrieve next batch data
     :param graph_inputs: mapping from string key to tf placeholders for feed_dict
     :param ops: dictionary of ops from computational graph
     :param convert_training_examples: function to convert training examples to feed dict
@@ -151,7 +151,7 @@ def _train_iteration(dataset_iterator, graph_inputs, ops, convert_training_examp
     :param sess: tensorflow session
     """
     try:
-        data = sess.run(dataset_iterator.get_next())
+        data = sess.run(data_stream_op)
         _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
                                     feed_dict=convert_training_examples(data=data, graph_inputs=graph_inputs))
         writer.add_summary(summary)
