@@ -1,11 +1,6 @@
-import collections
-import numpy as np
 import tensorflow as tf
 
 from komorebi.libs.trainer.abstract_tensorflow_trainer import AbstractTensorflowTrainer
-
-TrainingTensor = collections.namedtuple(typename="TrainingTensor", 
-                                        field_names=['sequence_tensor', 'annotation_tensor', 'label_tensor'])
 
 class AttentionTrainer(AbstractTensorflowTrainer):
     """Trainer implementation for training attention models."""
@@ -33,20 +28,19 @@ class AttentionTrainer(AbstractTensorflowTrainer):
         ops = {'loss_op' : loss_op, 'train_op': train_op, 'summary_op': summary_op}
         return graph_inputs, ops
 
-    def _convert_training_examples_to_feed_dict(self, graph_inputs, training_examples):
-        """Convert training inputs to graph inputs.
 
-        Tensorflow models rely on passing a feed_dict into the computational graph.
-        This function is responsible for translating the training examples into graph inputs.
-
+    def _convert_training_examples(self, data, graph_inputs):
+        """Convert training examples to graph inputs.
+        
+        :param data: tf examples parsed from dataset
         :param graph_inputs: dictionary mapping from string key to tf.placeholders
-        :param training_examples: training example types specific to dataset.
+        :return: 
+            feed_dict dictionary where keys are tf.placeholders and values are tensors.
+            This dictionary is passed to computational graph.
         """
-        training_tensor = _convert_to_training_tensor(training_examples)
-        feed_dict = {graph_inputs['sequences']: training_tensor.sequence_tensor,
-                     graph_inputs['features']: training_tensor.annotation_tensor,
-                     graph_inputs['labels']: training_tensor.label_tensor}
-        return feed_dict
+        return {graph_inputs['sequences']: data['sequence'],
+                graph_inputs['features']: data['annotation'],
+                graph_inputs['labels']: data['label']}
 
 
 def _get_loss_op(predictions, labels):
@@ -82,18 +76,4 @@ def _get_summary_op(loss_op):
         tf.summary.scalar("loss", loss_op)
         tf.summary.histogram("histogram_loss", loss_op)
         return tf.summary.merge_all()
-
-
-def _convert_to_training_tensor(training_examples):
-    """Convert training examples to training tensor specific to attention model.
-    
-    :param training_examples:
-        List of attention training examples.
-    :return:
-        TrainingTensor object.
-    """
-    sequence_tensor = np.concatenate([np.expand_dims(te.sequence, axis=0) for te in training_examples], axis=0)
-    label_tensor = np.concatenate([np.expand_dims(te.label, axis=0) for te in training_examples], axis=0)
-    annotation_tensor = np.concatenate([np.expand_dims(te.annotation, axis=0) for te in training_examples], axis=0)
-    return TrainingTensor(sequence_tensor=sequence_tensor, annotation_tensor=annotation_tensor, label_tensor=label_tensor)
 

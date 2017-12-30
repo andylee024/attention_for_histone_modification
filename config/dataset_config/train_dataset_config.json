@@ -1,9 +1,0 @@
-{
-    "description": "A configuration file specifying options for generating attention dataset.", 
-    "dataset_name": "attention_train_dataset",
-    "sequence_data": "/home/andyl2/Projects/komorebi/data/deepsea_train_x.npy",
-    "label_data": "/home/andyl2/Projects/komorebi/data/deepsea_train_y.npy",
-    "model_name": "DANQ",
-    "model_weights": "/home/andyl2/Projects/komorebi/data/danq/danq_weights_919_updated.hdf5",
-    "model_layer": "dense_1"
-}

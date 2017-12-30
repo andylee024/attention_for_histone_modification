@@ -7,7 +7,8 @@ import sys
 
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
 from komorebi.libs.model.attention_model import AttentionModel 
-from komorebi.libs.dataset.dataset_config import DatasetConfiguration
+from komorebi.libs.dataset.types.dataset_config import DatasetConfiguration
+from komorebi.libs.dataset.types.tf_dataset_wrapper import tf_dataset_wrapper 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
 from komorebi.libs.optimizer.optimizer_config import OptimizerConfiguration
 from komorebi.libs.optimizer.optimizer_factory import create_tf_optimizer 
@@ -159,7 +160,7 @@ def _create_dataset_configuration(dataset_config_json):
     with open(dataset_config_json, 'r') as f:
         datastore = json.load(f)
         return DatasetConfiguration(dataset_name=datastore['dataset_name'], 
-                                    dataset_path=datastore['dataset_path'])
+                                    examples_directory=datastore['examples_directory'])
 
 
 def _create_model_configuration(model_config_json):
@@ -212,6 +213,8 @@ def _create_trainer_configuration(trainer_config_json):
         datastore = json.load(f)
         return TrainerConfiguration(epochs=datastore['epochs'],
                                     batch_size=datastore['batch_size'],
+                                    buffer_size=datastore['buffer_size'],
+                                    parallel_calls=datastore['parallel_calls'],
                                     checkpoint_frequency=datastore['checkpoint_frequency'])
 
 # ----------------------------------------------------------------
@@ -222,10 +225,10 @@ def _load_dataset(dataset_config):
     """Load dataset from config.
     
     :param dataset_config: object of type DatasetConfiguration
-    :return: dataset satisfying AbstractDataset interface
+    :return: tf_dataset_wrapper object
     """
     logger.info("\t Loading dataset ...")
-    return load_pickle_object(dataset_config.dataset_path)
+    return tf_dataset_wrapper(dataset_config)
 
 
 def _load_model(model_config, parameter_policy):
