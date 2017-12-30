@@ -1,5 +1,3 @@
-import collections
-import numpy as np
 import tensorflow as tf
 
 from komorebi.libs.trainer.abstract_tensorflow_trainer import AbstractTensorflowTrainer

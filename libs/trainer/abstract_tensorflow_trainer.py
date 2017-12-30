@@ -1,14 +1,11 @@
 import abc
-import numpy as np
 import os
 import tensorflow as tf
 from tqdm import tqdm, trange
-import time
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
 from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_dataset_iterator_for_epoch
-from komorebi.libs.utilities.io_utils import ensure_directory
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
 
