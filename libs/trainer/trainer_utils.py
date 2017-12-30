@@ -28,6 +28,7 @@ def get_epoch_iterator(tf_dataset_wrapper, sess):
     shuffled_examples = tf_dataset_wrapper.get_shuffled_training_files()
     sess.run(tf_dataset_wrapper.iterator.initializer, 
              feed_dict={tf_dataset_wrapper.input_examples_op: shuffled_examples})
+    return tf_dataset_wrapper.iterator
 
 
 def compute_number_of_batches(tf_dataset_wrapper, batch_size):

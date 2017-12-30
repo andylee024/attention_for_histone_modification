@@ -7,15 +7,10 @@ import time
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
-from komorebi.libs.trainer.trainer_utils import batch_data
+from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_epoch_iterator, 
 from komorebi.libs.utilities.io_utils import ensure_directory
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
-SEQUENCE_SHAPE = (1000, 4)
-ANNOTATION_SHAPE = (75, 320)
-
-ITERATION_TIMES = []
-EPOCH_TIMES = []
 
 class AbstractTensorflowTrainer(AbstractTrainer):
     """Abstract base class to facilitate training models specific to tensorflow."""
@@ -43,9 +38,12 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         self.batch_size = config.batch_size
         self.checkpoint_frequency = config.checkpoint_frequency
         self.model_checkpoint_path = os.path.join(self._checkpoint_directory, "model-epoch-checkpoint") 
+        
+        self.buffer_size = 5000
+        self.parallel_calls = 6
 
 
-    def train_model(self, model, dataset, optimizer):
+    def train_model(self, model, tf_dataset_wrapper, optimizer):
         """Training procedure for a tensorflow model.
 
         This is a generic training procedure for a tensorflow model. Specifically, it 
@@ -61,27 +59,11 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         :param model: model object satisfying abstract model interface
         :param dataset: dataset object satisfying abstract dataset interface
         """
-        ##################
-        # add dataset ops
-        ##################
+        # setup compute graph
+        tf_dataset_wrapper.build_input_pipeline_iterator(batch_size=self.batch_size,
+                                                         buffer_size=self.buffer_size,
+                                                         parallel_calls=self.parallel_calls)
 
-        # get paths to tf records
-        tf_dataset_directory = "/Users/andy/Projects/biology/research/komorebi/data/attention_validation_tf_dataset"
-        tf_record_paths = [os.path.join(tf_dataset_directory, tf_record) for tf_record in os.listdir(tf_dataset_directory)]
-        buffer_size = 5000
-
-        # setup new computational graph
-        filenames_op = tf.placeholder(tf.string, shape=[None])
-        tf_dataset = tf.data.TFRecordDataset(filenames_op)
-        tf_dataset = tf_dataset.prefetch(buffer_size)
-        tf_dataset = tf_dataset.map(parse_example, num_parallel_calls=6)
-        tf_dataset = tf_dataset.batch(self.batch_size)
-        iterator = tf_dataset.make_initializable_iterator()
-        
-        #
-        # ORIGINAL CODE
-        # 
-        # build computational model
         graph_inputs, ops = self._build_computational_graph(model, optimizer)
 
         # initialization 
@@ -96,14 +78,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
             # session starts here
             sess.run(init_op)
             for epoch in trange(self.epochs, desc="epoch progress"):
-
-                epoch_ts = time.time()
-                # shuffle all examples and reinitialize dataset (out of memory shuffling)
-                np.random.shuffle(tf_record_paths)
-                sess.run(iterator.initializer, {filenames_op: tf_record_paths})
-
-                # training
-                _train_epoch(iterator=iterator,
+                epoch_iterator = get_epoch_iterator(tf_dataset_wrapper, sess)
+                _train_epoch(iterator=epoch_iterator,
                              batch_size=self.batch_size,
                              graph_inputs=graph_inputs,
                              ops=ops, 
@@ -113,9 +89,6 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
-                epoch_te = time.time()
-                epoch_time = epoch_te - epoch_ts
-                EPOCH_TIMES.append(epoch_time)
 
 
             # save trained model
@@ -151,26 +124,18 @@ def _train_epoch(iterator, batch_size, graph_inputs, ops, writer, sess):
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
-    count = 0
-    while True:
+    total_iterations = compute_number_of_batches(tf_dataset_wrapper, self.batch_size)
+    for iteration_number in tqdm(range(total_iterations)):
         try:
-            iteration_ts = time.time()
-            data = sess.run(iterator.get_next())
+            batch_data = sess.run(iterator.get_next())
 
-            # populate data placeholders
-            feed_dict = {graph_inputs['sequences']: data['sequence'],
-                         graph_inputs['features']: data['annotation'],
-                         graph_inputs['labels']: data['label']}
+            # TODO: use convert function here 
+            feed_dict = {graph_inputs['sequences']: batch_data['sequence'],
+                         graph_inputs['features']: batch_data['annotation'],
+                         graph_inputs['labels']: batch_data['label']}
 
             _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
-                               feed_dict=feed_dict)
-            iteration_te = time.time()
-            iter_time = iteration_te - iteration_ts
-
-            print "time for iteration {} : {}".format(count, iter_time)
-            print "loss for iteration {} : {}".format(count, loss)
-            ITERATION_TIMES.append(iter_time)
-            count += 1
+                                        feed_dict=feed_dict)
 
             writer.add_summary(summary)
 
@@ -192,24 +157,4 @@ def _save_trained_model(prediction_signature, experiment_directory, sess):
                                          signature_def_map={"predict": prediction_signature})
     model_path = builder.save()
     print "saved {}".format(model_path)
-
-
-def parse_example(tf_example):
-    """Parse tensorflow example"""
-    
-    features_map = {
-        'sequence_raw': tf.FixedLenFeature([], tf.string),
-        'label_raw': tf.FixedLenFeature([], tf.string),
-        'annotation_raw': tf.FixedLenFeature([], tf.string)}
-    
-    parsed_example = tf.parse_single_example(tf_example, features_map)
-    
-    sequence_raw = tf.decode_raw(parsed_example['sequence_raw'], tf.uint8)
-    annotation_raw = tf.decode_raw(parsed_example['annotation_raw'], tf.float32)
-    
-    sequence = tf.reshape(sequence_raw, SEQUENCE_SHAPE)
-    label = tf.decode_raw(parsed_example['label_raw'], tf.uint8)
-    annotation = tf.reshape(annotation_raw, ANNOTATION_SHAPE)
-    
-    return {'sequence': sequence, 'label': label, 'annotation': annotation}
 

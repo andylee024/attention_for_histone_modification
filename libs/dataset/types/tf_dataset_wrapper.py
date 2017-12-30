@@ -30,7 +30,7 @@ class tf_dataset_wrapper(object):
         """
         tf_dataset = tf.data.TFRecordDataset(self.input_filenames_op)
         tf_dataset = tf_dataset.prefetch(buffer_size)
-        tf_dataset = tf_dataset.map(parse_example, num_parallel_calls=6)
+        tf_dataset = tf_dataset.map(_parse_attention_example, num_parallel_calls=6)
         tf_dataset = tf_dataset.batch(self.batch_size)
         self._iterator = tf.dataset.make_initializable_iterator
 
