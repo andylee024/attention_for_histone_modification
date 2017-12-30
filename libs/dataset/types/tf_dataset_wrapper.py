@@ -2,22 +2,27 @@ import numpy as np
 import os
 import tensorflow as tf
 
+from komorebi.libs.dataset.parsing.tf_example_parsers import parse_attention_example
+from komorebi.libs.dataset.types.dataset_config import DatasetConfiguration
+
 
 class tf_dataset_wrapper(object):
     """A wrapper for tensorflow datasets to make training more convenient."""
 
-    def __init__(self, config=None):
+    def __init__(self, config):
         """Initialize dataset."""
-        self._training_examples = _get_examples_from_config(config)
+        assert isinstance(config, DatasetConfiguration)
+        
+        self._name = config.dataset_name
+        self._training_examples = _get_examples_from_directory(config.examples_directory)
+        self._parse_function  = parse_attention_example
 
-        self.input_examples_op = _get_input_examples_op()
         self._iterator = None
-
+        self.input_examples_op = _get_input_examples_op()
 
     def get_shuffled_training_files(self):
         """Return shuffled list of training example files."""
         return np.random.permutation(self._training_examples)
-
 
     def build_input_pipeline_iterator(self, batch_size, buffer_size, parallel_calls):
         """Build and return dataset iterator object with specified input processing parameters.
@@ -29,7 +34,7 @@ class tf_dataset_wrapper(object):
         """
         tf_dataset = tf.data.TFRecordDataset(self.input_examples_op)
         tf_dataset = tf_dataset.prefetch(buffer_size)
-        tf_dataset = tf_dataset.map(_parse_attention_example, num_parallel_calls=parallel_calls)
+        tf_dataset = tf_dataset.map(map_func=self._parse_function, num_parallel_calls=parallel_calls)
         tf_dataset = tf_dataset.batch(batch_size)
         self._iterator = tf_dataset.make_initializable_iterator()
 
@@ -57,50 +62,13 @@ def _get_input_examples_op():
         return tf.placeholder(tf.string, shape=[None])
 
 
-def _get_examples_from_config(config):
+def _get_examples_from_directory(examples_directory):
     """Return list of .tfrecord files associated with a directory.
    
-    :param directory: directory containing tf records.
-    :return: list of paths corresponding to tf records.
+    :param examples_directory: directory containing tf records
+    :return: list of paths corresponding to tf records
     """
-    #TODO: handle this constant correctly
-    TRAINING_EXAMPLE_DIRECTORY = "/Users/andy/Projects/biology/research/komorebi/data/attention_validation_tf_dataset"
-    directory = TRAINING_EXAMPLE_DIRECTORY
-    return [os.path.join(directory, tf_record) for tf_record in os.listdir(directory)]
-
-
-def _parse_attention_example(tf_example):
-    """Parse tensorflow example type specifically assumed to be attention type.
-    
-    :param tf_example: example type from tensorflow
-    :return: dictionary of tensors with the following attributes.
-        
-        'sequence'      : sequence tensor (1000, 4)
-        'label'         : label tensor (919,)
-        'annotation'    : annotation tensor (75, 320)
-    """
-    # TODO: figure out a better place for parse functions
-    # TODO: figure out a cleaner way to handle these constants 
-    # TODO: use named-tuple return type rather than dictionary
-    SEQUENCE_SHAPE = (1000, 4)
-    ANNOTATION_SHAPE = (75, 320)
-
-    # specify features in attention example  
-    features_map = {
-        'sequence_raw': tf.FixedLenFeature([], tf.string),
-        'label_raw': tf.FixedLenFeature([], tf.string),
-        'annotation_raw': tf.FixedLenFeature([], tf.string)}
-
-    # parse tf example for internal tensors
-    parsed_example = tf.parse_single_example(tf_example, features_map)
-    sequence_raw = tf.decode_raw(parsed_example['sequence_raw'], tf.uint8)
-    label_raw = tf.decode_raw(parsed_example['label_raw'], tf.uint8)
-    annotation_raw = tf.decode_raw(parsed_example['annotation_raw'], tf.float32)
-
-    # parsed tensors are flat so reshape if needed
-    sequence = tf.reshape(sequence_raw, SEQUENCE_SHAPE)
-    label = label_raw
-    annotation = tf.reshape(annotation_raw, ANNOTATION_SHAPE)
-
-    return {'sequence': sequence, 'label': label, 'annotation': annotation}
+    if os.path.isdir(examples_directory):
+        return [os.path.join(examples_directory, tf_record) for tf_record in os.listdir(examples_directory)]
+    raise IOError("Directory {} does not exist!".format(examples_directory))
 

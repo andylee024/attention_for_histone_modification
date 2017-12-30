@@ -7,7 +7,7 @@ import sys
 
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
 from komorebi.libs.model.attention_model import AttentionModel 
-from komorebi.libs.dataset.dataset_config import DatasetConfiguration
+from komorebi.libs.dataset.types.dataset_config import DatasetConfiguration
 from komorebi.libs.dataset.types.tf_dataset_wrapper import tf_dataset_wrapper 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
 from komorebi.libs.optimizer.optimizer_config import OptimizerConfiguration
@@ -53,7 +53,7 @@ def main(args):
     trainer = _load_trainer(experiment_config)
 
     # train model
-    trainer.train_model(tf_dataset_wrapper=dataset, model=model, optimizer=optimizer)
+    trainer.train_model(dataset=dataset, model=model, optimizer=optimizer)
 
 # ----------------------------------------------------------------
 # Helpers for setting up experiment
@@ -160,7 +160,7 @@ def _create_dataset_configuration(dataset_config_json):
     with open(dataset_config_json, 'r') as f:
         datastore = json.load(f)
         return DatasetConfiguration(dataset_name=datastore['dataset_name'], 
-                                    dataset_path=datastore['dataset_path'])
+                                    examples_directory=datastore['examples_directory'])
 
 
 def _create_model_configuration(model_config_json):
@@ -225,10 +225,10 @@ def _load_dataset(dataset_config):
     """Load dataset from config.
     
     :param dataset_config: object of type DatasetConfiguration
-    :return: dataset satisfying AbstractDataset interface
+    :return: tf_dataset_wrapper object
     """
     logger.info("\t Loading dataset ...")
-    return tf_dataset_wrapper()
+    return tf_dataset_wrapper(dataset_config)
 
 
 def _load_model(model_config, parameter_policy):

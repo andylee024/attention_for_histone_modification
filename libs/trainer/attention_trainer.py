@@ -30,6 +30,21 @@ class AttentionTrainer(AbstractTensorflowTrainer):
         ops = {'loss_op' : loss_op, 'train_op': train_op, 'summary_op': summary_op}
         return graph_inputs, ops
 
+
+    def _convert_training_examples(self, data, graph_inputs):
+        """Convert training examples to graph inputs.
+        
+        :param data: tf examples parsed from dataset
+        :param graph_inputs: dictionary mapping from string key to tf.placeholders
+        :return: 
+            feed_dict dictionary where keys are tf.placeholders and values are tensors.
+            This dictionary is passed to computational graph.
+        """
+        return {graph_inputs['sequences']: data['sequence'],
+                graph_inputs['features']: data['annotation'],
+                graph_inputs['labels']: data['label']}
+
+
 def _get_loss_op(predictions, labels):
     """Return loss for model.
 

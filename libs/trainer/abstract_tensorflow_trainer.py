@@ -7,7 +7,7 @@ import time
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
-from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_epoch_iterator
+from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_dataset_iterator_for_epoch
 from komorebi.libs.utilities.io_utils import ensure_directory
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
@@ -41,10 +41,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         self.checkpoint_frequency = config.checkpoint_frequency
 
         self.model_checkpoint_path = os.path.join(self._checkpoint_directory, "model-epoch-checkpoint") 
-        
 
-
-    def train_model(self, model, tf_dataset_wrapper, optimizer):
+    def train_model(self, model, dataset, optimizer):
         """Training procedure for a tensorflow model.
 
         This is a generic training procedure for a tensorflow model. Specifically, it 
@@ -58,12 +56,13 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                 |-- summaries
         
         :param model: model object satisfying abstract model interface
-        :param dataset: dataset object satisfying abstract dataset interface
+        :param dataset: tf_dataset_wrapper object
+        :param optimizer: tf optimizer object
         """
         # setup compute graph
-        tf_dataset_wrapper.build_input_pipeline_iterator(batch_size=self.batch_size,
-                                                         buffer_size=self.buffer_size,
-                                                         parallel_calls=self.parallel_calls)
+        dataset.build_input_pipeline_iterator(batch_size=self.batch_size,
+                                              buffer_size=self.buffer_size,
+                                              parallel_calls=self.parallel_calls)
         graph_inputs, ops = self._build_computational_graph(model, optimizer)
         
         # initialize variables and objects
@@ -76,17 +75,17 @@ class AbstractTensorflowTrainer(AbstractTrainer):
             sess.run(init_op)
 
             for epoch in trange(self.epochs, desc="epoch progress"):
-                _train_epoch(tf_dataset_wrapper=tf_dataset_wrapper,
+                _train_epoch(dataset=dataset,
                              batch_size=self.batch_size,
                              graph_inputs=graph_inputs,
                              ops=ops, 
+                             convert_training_examples=self._convert_training_examples,
                              writer=writer,
                              sess=sess)
 
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
-
 
             # save trained model
             _save_trained_model(prediction_signature=model.prediction_signature, 
@@ -105,36 +104,63 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         """
         pass
 
+    @abc.abstractmethod
+    def _convert_training_examples(self, data, graph_inputs):
+        """Convert training inputs to graph inputs.
 
-def _train_epoch(tf_dataset_wrapper, batch_size, graph_inputs, ops, writer, sess):
+        Tensorflow models rely on passing a feed_dict into the computational graph.
+        This function is responsible for translating the parsed examples into graph inputs.
+
+        :param data: tf examples parsed from dataset
+        :param graph_inputs: dictionary mapping from string key to tf.placeholders
+        :return: 
+            feed_dict dictionary where keys are tf.placeholders and values are tensors.
+            This dictionary is passed to computational graph.
+        """
+        pass
+
+
+def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
-    :param graph_inputs: 
     :param batch_size: size of each batch in iteration
+    :param graph_inputs: mapping from string key to tf placeholders for feed_dict
     :param ops: dictionary of ops from computational graph
-    :param convert_training_examples: function to convert training examples to feed dict.
+    :param convert_training_examples: function to convert training examples to feed dict
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
-    epoch_iterator = get_epoch_iterator(tf_dataset_wrapper, sess)
-    total_iterations = compute_number_of_batches(tf_dataset_wrapper, batch_size)
-    for iteration_number in tqdm(range(total_iterations)):
-        try:
-            batch_data = sess.run(epoch_iterator.get_next())
+    total_iterations = compute_number_of_batches(dataset, batch_size)
+    dataset_iterator = get_dataset_iterator_for_epoch(dataset, sess)
 
-            # TODO: use convert function here 
-            feed_dict = {graph_inputs['sequences']: batch_data['sequence'],
-                         graph_inputs['features']: batch_data['annotation'],
-                         graph_inputs['labels']: batch_data['label']}
+    for iteration_number in tqdm(range(total_iterations), desc="\t iteration_progress"):
+        _train_iteration(dataset_iterator=dataset_iterator, 
+                         graph_inputs=graph_inputs, 
+                         ops=ops, 
+                         convert_training_examples=convert_training_examples, 
+                         writer=writer, 
+                         sess=sess)
 
-            _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
-                                        feed_dict=feed_dict)
 
-            writer.add_summary(summary)
+def _train_iteration(dataset_iterator, graph_inputs, ops, convert_training_examples, writer, sess):
+    """Train a single iteration of model.
+    
+    :param dataset_iterator: dataset iterator for batch data
+    :param graph_inputs: mapping from string key to tf placeholders for feed_dict
+    :param ops: dictionary of ops from computational graph
+    :param convert_training_examples: function to convert training examples to feed dict
+    :param writer: tensorflow file writer for writing summaries
+    :param sess: tensorflow session
+    """
+    try:
+        data = sess.run(dataset_iterator.get_next())
+        _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
+                                    feed_dict=convert_training_examples(data=data, graph_inputs=graph_inputs))
+        writer.add_summary(summary)
 
-        except tf.errors.OutOfRangeError:
-            return
+    except tf.errors.OutOfRangeError:
+        return
 
 
 def _save_trained_model(prediction_signature, experiment_directory, sess):
