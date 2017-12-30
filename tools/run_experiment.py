@@ -8,6 +8,7 @@ import sys
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
 from komorebi.libs.model.attention_model import AttentionModel 
 from komorebi.libs.dataset.dataset_config import DatasetConfiguration
+from komorebi.libs.dataset.types.tf_dataset_wrapper import tf_dataset_wrapper 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
 from komorebi.libs.optimizer.optimizer_config import OptimizerConfiguration
 from komorebi.libs.optimizer.optimizer_factory import create_tf_optimizer 
@@ -52,7 +53,7 @@ def main(args):
     trainer = _load_trainer(experiment_config)
 
     # train model
-    trainer.train_model(dataset=dataset, model=model, optimizer=optimizer)
+    trainer.train_model(tf_dataset_wrapper=dataset, model=model, optimizer=optimizer)
 
 # ----------------------------------------------------------------
 # Helpers for setting up experiment
@@ -212,6 +213,8 @@ def _create_trainer_configuration(trainer_config_json):
         datastore = json.load(f)
         return TrainerConfiguration(epochs=datastore['epochs'],
                                     batch_size=datastore['batch_size'],
+                                    buffer_size=datastore['buffer_size'],
+                                    parallel_calls=datastore['parallel_calls'],
                                     checkpoint_frequency=datastore['checkpoint_frequency'])
 
 # ----------------------------------------------------------------
@@ -225,7 +228,7 @@ def _load_dataset(dataset_config):
     :return: dataset satisfying AbstractDataset interface
     """
     logger.info("\t Loading dataset ...")
-    return load_pickle_object(dataset_config.dataset_path)
+    return tf_dataset_wrapper()
 
 
 def _load_model(model_config, parameter_policy):

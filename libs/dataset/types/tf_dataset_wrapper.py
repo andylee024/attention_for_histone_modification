@@ -9,9 +9,8 @@ class tf_dataset_wrapper(object):
     def __init__(self, config=None):
         """Initialize dataset."""
         self._training_examples = _get_examples_from_config(config)
-        self._parse_function = _get_parse_function_from_config(config)
 
-        self.input_examples_op = _get_input_filenames_op()
+        self.input_examples_op = _get_input_examples_op()
         self._iterator = None
 
 
@@ -28,11 +27,11 @@ class tf_dataset_wrapper(object):
         :param parallel_calls: number of threads to spin off for processing input files
         :return: iterator object
         """
-        tf_dataset = tf.data.TFRecordDataset(self.input_filenames_op)
+        tf_dataset = tf.data.TFRecordDataset(self.input_examples_op)
         tf_dataset = tf_dataset.prefetch(buffer_size)
-        tf_dataset = tf_dataset.map(_parse_attention_example, num_parallel_calls=6)
-        tf_dataset = tf_dataset.batch(self.batch_size)
-        self._iterator = tf.dataset.make_initializable_iterator
+        tf_dataset = tf_dataset.map(_parse_attention_example, num_parallel_calls=parallel_calls)
+        tf_dataset = tf_dataset.batch(batch_size)
+        self._iterator = tf_dataset.make_initializable_iterator()
 
     @property
     def number_of_examples(self):
@@ -54,7 +53,7 @@ def _get_input_examples_op():
     The current implementation is based on tfrecords, but in general these can be any type of files provided the 
     files can be parsed.
     """
-    with tf.variable_scope('input_filenames_op', reuse=False):
+    with tf.variable_scope('input_examples_op', reuse=False):
         return tf.placeholder(tf.string, shape=[None])
 
 

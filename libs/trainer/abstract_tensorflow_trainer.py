@@ -7,7 +7,7 @@ import time
 
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
-from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_epoch_iterator, 
+from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_epoch_iterator
 from komorebi.libs.utilities.io_utils import ensure_directory
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
@@ -36,11 +36,12 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
         self.epochs = config.epochs
         self.batch_size = config.batch_size
+        self.buffer_size = config.buffer_size
+        self.parallel_calls = config.parallel_calls
         self.checkpoint_frequency = config.checkpoint_frequency
+
         self.model_checkpoint_path = os.path.join(self._checkpoint_directory, "model-epoch-checkpoint") 
         
-        self.buffer_size = 5000
-        self.parallel_calls = 6
 
 
     def train_model(self, model, tf_dataset_wrapper, optimizer):
@@ -63,23 +64,19 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         tf_dataset_wrapper.build_input_pipeline_iterator(batch_size=self.batch_size,
                                                          buffer_size=self.buffer_size,
                                                          parallel_calls=self.parallel_calls)
-
         graph_inputs, ops = self._build_computational_graph(model, optimizer)
-
-        # initialization 
-        init_op = tf.global_variables_initializer()
-        tf.get_variable_scope().reuse_variables()
-
+        
+        # initialize variables and objects
         saver = tf.train.Saver()
         writer = tf.summary.FileWriter(self._summary_directory)
+        init_op = tf.global_variables_initializer()
+        tf.get_variable_scope().reuse_variables()
         
-        # initialize session and start training
         with tf.Session() as sess:
-            # session starts here
             sess.run(init_op)
+
             for epoch in trange(self.epochs, desc="epoch progress"):
-                epoch_iterator = get_epoch_iterator(tf_dataset_wrapper, sess)
-                _train_epoch(iterator=epoch_iterator,
+                _train_epoch(tf_dataset_wrapper=tf_dataset_wrapper,
                              batch_size=self.batch_size,
                              graph_inputs=graph_inputs,
                              ops=ops, 
@@ -96,10 +93,6 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
 
-        print "batch_size : {}".format(self.batch_size)
-        print "average iteration time: {}".format(np.mean(ITERATION_TIMES))
-        print "average epoch time: {}".format(np.mean(EPOCH_TIMES))
-
     @abc.abstractmethod
     def _build_computational_graph(self, model, optimizer):
         """Construct a computational graph for training a model.
@@ -113,7 +106,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-def _train_epoch(iterator, batch_size, graph_inputs, ops, writer, sess):
+def _train_epoch(tf_dataset_wrapper, batch_size, graph_inputs, ops, writer, sess):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -124,10 +117,11 @@ def _train_epoch(iterator, batch_size, graph_inputs, ops, writer, sess):
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
     """
-    total_iterations = compute_number_of_batches(tf_dataset_wrapper, self.batch_size)
+    epoch_iterator = get_epoch_iterator(tf_dataset_wrapper, sess)
+    total_iterations = compute_number_of_batches(tf_dataset_wrapper, batch_size)
     for iteration_number in tqdm(range(total_iterations)):
         try:
-            batch_data = sess.run(iterator.get_next())
+            batch_data = sess.run(epoch_iterator.get_next())
 
             # TODO: use convert function here 
             feed_dict = {graph_inputs['sequences']: batch_data['sequence'],

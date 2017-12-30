@@ -5,5 +5,7 @@
         "learning_rate": 0.01},
     "epochs": 1,
     "batch_size": 2000,
+    "buffer_size": 5000,
+    "parallel_calls": 6,
     "checkpoint_frequency": 1 
 }
