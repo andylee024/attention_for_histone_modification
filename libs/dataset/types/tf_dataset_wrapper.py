@@ -32,9 +32,14 @@ class tf_dataset_wrapper(object):
         :param parallel_calls: number of threads to spin off for processing input files
         :return: iterator object
         """
-        tf_dataset = tf.data.TFRecordDataset(self.input_examples_op)
-        tf_dataset = tf_dataset.prefetch(buffer_size)
-        tf_dataset = tf_dataset.map(map_func=self._parse_function, num_parallel_calls=parallel_calls)
+        tf_dataset = tf.contrib.data.TFRecordDataset(self.input_examples_op)
+
+        # 1.4 version
+        #tf_dataset = tf_dataset.prefetch(buffer_size) 
+
+        # 1.3 version (remove output_buffer_size for above when changing to 1.4)
+        # See (https://github.com/tensorflow/tensorflow/blob/r1.4/tensorflow/contrib/data/README.md)
+        tf_dataset = tf_dataset.map(map_func=self._parse_function, num_threads=parallel_calls, output_buffer_size=buffer_size)
         tf_dataset = tf_dataset.batch(batch_size)
         self._iterator = tf_dataset.make_initializable_iterator()
 
