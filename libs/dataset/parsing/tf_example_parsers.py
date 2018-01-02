@@ -23,13 +23,16 @@ def parse_attention_example(tf_example):
 
     # parse tf example for internal tensors
     parsed_example = tf.parse_single_example(tf_example, features_map)
+
+    # decode examples
     sequence_raw = tf.decode_raw(parsed_example['sequence_raw'], tf.uint8)
     label_raw = tf.decode_raw(parsed_example['label_raw'], tf.uint8)
     annotation_raw = tf.decode_raw(parsed_example['annotation_raw'], tf.float32)
 
     # parsed tensors are flat so reshape if needed
-    sequence = tf.reshape(sequence_raw, SEQUENCE_SHAPE)
-    label = label_raw
+    # cast to floats for attention task
+    sequence = tf.cast(tf.reshape(sequence_raw, SEQUENCE_SHAPE), dtype=tf.float32)
+    label = tf.cast(label_raw, dtype=tf.float32)
     annotation = tf.reshape(annotation_raw, ANNOTATION_SHAPE)
 
     return {'sequence': sequence, 'label': label, 'annotation': annotation}
