@@ -74,8 +74,8 @@ class AttentionModel(AbstractTensorflowModel):
         features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
         sequences_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
 
-        return {'features'  : tf.placeholder(dtype=tf.float32, shape=features_shape),
-                'sequences' : tf.placeholder(dtype=tf.float32, shape=sequences_shape)}
+        return {'features'  : tf.placeholder(dtype=tf.float32, shape=features_shape, name="features"),
+                'sequences' : tf.placeholder(dtype=tf.float32, shape=sequences_shape, name="sequences")}
 
     @property
     def outputs(self):
@@ -86,7 +86,7 @@ class AttentionModel(AbstractTensorflowModel):
                 "labels" : placeholder of shape (batch_size, prediction_classes)
         """
         labels_shape = (None, self._model_config.prediction_classes)
-        return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape)}
+        return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape, name="labels")}
 
     @property
     def prediction_signature(self):
@@ -341,7 +341,7 @@ def select_context(features, context_probabilities, model_config):
     """
     selected_context_indices = tf.argmax(context_probabilities, axis=1, output_type=tf.int32)
     gather_indices = convert_to_gather_indices(selected_context_indices, batch_size=get_batch_size(features))
-    return tf.gather_nd(params=features, indices=gather_indices)
+    return tf.gather_nd(params=features, indices=gather_indices, name="context")
 
 
 def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=False):
@@ -379,7 +379,8 @@ def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=Fal
 
         hidden_contribution = tf.matmul(hidden_state, w_hidden)
         context_contribution = tf.matmul(context, w_context)
-        logits = hidden_contribution + context_contribution + bias_out
+
+        logits = tf.add(x=tf.add(hidden_contribution, context_contribution), y=bias_out, name="logits")
         return logits
 
 
