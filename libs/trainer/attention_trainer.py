@@ -19,7 +19,7 @@ class AttentionTrainer(AbstractTensorflowTrainer):
                         'labels'    : model.outputs['labels']}
     
         model_return = model.predict(features=graph_inputs['features'], 
-                                    sequences=graph_inputs['sequences'])
+                                     sequences=graph_inputs['sequences'])
     
         loss_op = _get_loss_op(predictions=model_return.predictions, labels=graph_inputs['labels'])
         train_op = _get_train_op(loss_op=loss_op, optimizer=optimizer)

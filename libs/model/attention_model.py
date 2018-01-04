@@ -22,6 +22,9 @@ class AttentionModel(AbstractTensorflowModel):
         self._model_config = attention_config
         self._parameter_policy = parameter_policy
 
+        self._model_inputs = None
+        self._model_outputs = None
+
         # initialize LSTM for attention model
         self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
 
@@ -32,6 +35,9 @@ class AttentionModel(AbstractTensorflowModel):
         :param sequences: tf.placeholder populated with sequence data.
         :return: attention return type
         """
+        print "features_placeholder_name: {}".format(features.name)
+        print "sequences_placeholder_name: {}".format(sequences.name)
+
         # Get initial LSTM states for each sequence in batch (N x H)
         memory_state, hidden_state = get_initial_lstm(features=features,
                                                       model_config=self._model_config,
@@ -71,11 +77,16 @@ class AttentionModel(AbstractTensorflowModel):
                 "features"  :   placeholder of shape (batch_size, number_annotations, annotation_size)
                 "sequences" :   placeholder of shape (batch_size, sequence_length, vocabulary_size)
         """
-        features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
-        sequences_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
+        if self._model_inputs is None:
+            with tf.variable_scope('model_inputs', reuse=False):
+                features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
+                sequences_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
+                
+                features = tf.placeholder(dtype=tf.float32, shape=features_shape, name="features")
+                sequences = tf.placeholder(dtype=tf.float32, shape=sequences_shape, name="sequences")
+                self._model_inputs = {'features'  : features, 'sequences' : sequences} 
 
-        return {'features'  : tf.placeholder(dtype=tf.float32, shape=features_shape, name="features"),
-                'sequences' : tf.placeholder(dtype=tf.float32, shape=sequences_shape, name="sequences")}
+        return self._model_inputs
 
     @property
     def outputs(self):
@@ -85,8 +96,10 @@ class AttentionModel(AbstractTensorflowModel):
             Dictionary with following attributes.
                 "labels" : placeholder of shape (batch_size, prediction_classes)
         """
-        labels_shape = (None, self._model_config.prediction_classes)
-        return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape, name="labels")}
+        if self._model_outputs is None:
+            labels_shape = (None, self._model_config.prediction_classes)
+            self._model_outputs = {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape, name="labels")}
+        return self._model_outputs
 
     @property
     def prediction_signature(self):
@@ -175,8 +188,8 @@ def attention_project_features(features, model_config, parameter_policy, reuse=F
         Weighted transformation of features (N x L x D).
     """
     features_shape = (get_batch_size(features),
-                      model_config.number_of_annotations,
-                      model_config.annotation_size)  # (N x L x D)
+                        model_config.number_of_annotations,
+                        model_config.annotation_size)  # (N x L x D)
     flatten_shape = (-1, model_config.annotation_size)  # converts tensor to to (NL x D)
     weight_shape = (model_config.annotation_size, model_config.annotation_size)  # (D x D)
 
