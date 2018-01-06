@@ -30,17 +30,3 @@ class AttentionConfiguration(object):
         self.annotation_size = annotation_size
         self.hidden_state_dimension = hidden_state_dimension
 
-
-class trained_attention_model_configuration(object):
-    """Configuration object containing details of trained attention model."""
-    
-    def __init__(self, trained_model_directory):
-        """Initialize configuration.
-
-        :param trained_model_directory: directory containing saved tensorflow .pb file 
-        """
-        self.trained_model_directory = trained_model_directory
-        self.sequence_placeholder_op_name = "model_inputs/sequences:0"
-        self.annotation_placeholder_op_name = "model_inputs/features:0"
-        self.prediction_op_name = "decode_lstm/logits:0"
-

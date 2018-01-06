@@ -20,7 +20,7 @@ def get_inference_ops(trained_model_config, sess):
     return inference_ops(
             sequence_placeholder=graph.get_tensor_by_name(trained_model_config.sequence_placeholder_op_name),
             annotation_placeholder=graph.get_tensor_by_name(trained_model_config.annotation_placeholder_op_name),
-            prediction=graph.get_tensor_by_name(trained_model_config.prediction_op_name))
+            prediction=graph.get_tensor_by_name("predictions_op:0"))
 
 
 def _load_inference_graph_into_session(trained_model_config, sess):

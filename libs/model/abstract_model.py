@@ -1,29 +1,15 @@
 import abc
 
-class AbstractModel(object):
-    """Abstract base class for machine learning models."""
-    __metaclass__ = abc.ABCMeta
-    
-    @abc.abstractmethod
-    def predict(self, *args):
-        """Compute model prediction.
-
-        :param *args : input data X specific to model.
-        :return y : predictions based on input data.
-        """
-        pass
-
-
-class AbstractTensorflowModel(AbstractModel):
+class AbstractTensorflowModel(object):
     """Abstract base class specific to tensorflow models."""
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
-    def predict(self, *args):
+    @abc.abstractproperty
+    def inference(self, *args):
         """Compute model prediction.
 
-        :param *args : input data X specific to model.
-        :return y : predictions based on input data.
+        :param *args : input data X specific to model
+        :return : dictionary of inference ops specific to inference
         """
         pass
 
@@ -46,3 +32,7 @@ class AbstractTensorflowModel(AbstractModel):
     def prediction_signature(self):
         """Return prediction signature of model."""
         pass
+
+    @abc.abstractmethod
+    def _build_inference_graph(self, *args):
+        """Build inference graph associated with model architecture."""

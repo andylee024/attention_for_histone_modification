@@ -3,11 +3,9 @@ import os
 import tensorflow as tf
 from tqdm import tqdm, trange
 
-from komorebi.libs.model.attention_configuration import trained_attention_model_configuration
 from komorebi.libs.trainer.abstract_trainer import AbstractTrainer
 from komorebi.libs.trainer.trainer_config import TrainerConfiguration
 from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_data_stream_for_epoch
-from komorebi.libs.utilities.io_utils import write_object_to_disk
 
 TRAINED_MODEL_DIRECTORY_NAME = "trained_model"
 
@@ -87,7 +85,6 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                     saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
 
             # save trained model
-            _save_trained_model_config(self._experiment_directory)
             _save_trained_model(prediction_signature=model.prediction_signature, 
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
@@ -164,20 +161,6 @@ def _train_iteration(data_stream_op, graph_inputs, ops, convert_training_example
         return
 
 
-def _save_trained_model_config(experiment_directory):
-    """Save configuration file associated with final model to restore trained model.
-
-    Note this procedure is not general and specific to the attention model which violates 
-    the abstract inteface.
-    
-    :param trained_directory: directory to save final model
-    """
-    save_path = os.path.join(experiment_directory, "trained_model_config.pkl")
-    trained_model_directory = os.path.join(experiment_directory, TRAINED_MODEL_DIRECTORY_NAME)
-    trained_model_config = trained_attention_model_configuration(trained_model_directory)
-    write_object_to_disk(obj=trained_model_config, path=save_path)
-
-    
 def _save_trained_model(prediction_signature, experiment_directory, sess):
     """Save the final model.
     

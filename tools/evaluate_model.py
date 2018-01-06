@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sklearn
 import tensorflow as tf
 
 from komorebi.libs.dataset.types.dataset_config import DatasetConfiguration
@@ -18,7 +19,6 @@ def _load_dataset():
     return tf_dataset_wrapper(dataset_config)
 
 def main():
-
     # setup evaluation objects
     dataset = _load_dataset()
     trained_model_config = load_pickle_object(TRAINED_MODEL_CONFIG)
@@ -38,9 +38,19 @@ def main():
         data = sess.run(data_stream_op)
 
 
-        logits = sess.run(inference_ops.prediction, feed_dict={inference_ops.sequence_placeholder: data['sequence'], 
-                                                               inference_ops.annotation_placeholder: data['annotation']})
-        print logits.shape
+        predictions = sess.run(inference_ops.prediction, feed_dict={inference_ops.sequence_placeholder: data['sequence'], 
+                                                                    inference_ops.annotation_placeholder: data['annotation']})
+        labels = data['label']
+
+
+        print "predictions_shape: {}".format(predictions.shape)
+        print "labels_shape: {}".format(data['label'].shape)
+
+        accuracy = sklearn.metrics.accuracy_score(np.ravel(labels), np.ravel(predictions), normalize=True)
+        print "accuracy: {}".format(accuracy)
+        
+        accuracy_unflat = sklearn.metrics.acuracy_score(labels, predictions, normalize=True)
+        print "unflattened accuracy:{}".format(accuracy_unflat)
     
     
 if __name__ == "__main__":

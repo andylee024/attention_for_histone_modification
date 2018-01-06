@@ -19,54 +19,30 @@ class AttentionModel(AbstractTensorflowModel):
         """
         assert isinstance(attention_config, AttentionConfiguration)
         assert isinstance(parameter_policy, ParameterInitializationPolicy)
+
         self._model_config = attention_config
         self._parameter_policy = parameter_policy
 
         self._model_inputs = None
         self._model_outputs = None
+        self._model_inference = None
 
         # initialize LSTM for attention model
-        self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
+        self._lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
+    
+    @property
+    def inference(self):
+        """Perform inference for attention model.
 
-    def predict(self, features, sequences):
-        """Compute predictions for attention model.
-
-        :param features: tf.placeholder populated with convolutional annotation vectors.
-        :param sequences: tf.placeholder populated with sequence data.
-        :return: attention return type
+        :return: dictionary of inference ops 
+            "context"           : context probabilities for annotations
+            "logit"             : unnormalized logits 
+            "prediction"        : prediction probabilities for each class
+            "classification"    : binary classification based on prediction probabilities 
         """
-        print "features_placeholder_name: {}".format(features.name)
-        print "sequences_placeholder_name: {}".format(sequences.name)
-
-        # Get initial LSTM states for each sequence in batch (N x H)
-        memory_state, hidden_state = get_initial_lstm(features=features,
-                                                      model_config=self._model_config,
-                                                      parameter_policy=self._parameter_policy)
-
-        # Get hidden states for each sequence in batch (N x H)
-        for t in range(self._model_config.sequence_length):
-            with tf.variable_scope('update_lstm', reuse=(t != 0)):
-                _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
-                                                                 state=[memory_state, hidden_state])
-
-        # Compute context probabilities for each sequence in batch conditioned on hidden states (N x L)
-        context_probabilities = compute_context_probabilities(features=features,
-                                                              hidden_state=hidden_state,
-                                                              model_config=self._model_config,
-                                                              parameter_policy=self._parameter_policy,
-                                                              reuse=None)
-
-        # Select context based on attention probabilities.
-        context = select_context(features, context_probabilities, model_config=self._model_config)  # (N x D)
-
-        # get logits
-        logits = decode_lstm(hidden_state=hidden_state,
-                             context=context,
-                             model_config=self._model_config,
-                             parameter_policy=self._parameter_policy,
-                             reuse=None)
-
-        return AttentionModelReturn(predictions=logits, context_probabilities=context_probabilities)
+        if self._model_inference is None:
+            self._build_inference_graph(sequence=self.inputs['sequence'], features=self.inputs['features'])
+        return self._model_inference
    
     @property
     def inputs(self):
@@ -74,17 +50,18 @@ class AttentionModel(AbstractTensorflowModel):
 
         :return:
             Dictionary with following attributes.
+                "sequence" :   placeholder of shape (batch_size, sequence_length, vocabulary_size)
                 "features"  :   placeholder of shape (batch_size, number_annotations, annotation_size)
-                "sequences" :   placeholder of shape (batch_size, sequence_length, vocabulary_size)
         """
         if self._model_inputs is None:
             with tf.variable_scope('model_inputs', reuse=False):
                 features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
-                sequences_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
-                
+                sequence_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
+
                 features = tf.placeholder(dtype=tf.float32, shape=features_shape, name="features")
-                sequences = tf.placeholder(dtype=tf.float32, shape=sequences_shape, name="sequences")
-                self._model_inputs = {'features'  : features, 'sequences' : sequences} 
+                sequence = tf.placeholder(dtype=tf.float32, shape=sequence_shape, name="sequence")
+
+                self._model_inputs = {'sequence' : sequence, 'features'  : features} 
 
         return self._model_inputs
 
@@ -107,20 +84,73 @@ class AttentionModel(AbstractTensorflowModel):
         
         :return: tensorflow signature for prediction
         """
-        model_return = self.predict(features=self.inputs['features'], 
-                                    sequences=self.inputs['sequences'])
-
         tensor_info_features = tf.saved_model.utils.build_tensor_info(self.inputs['features'])
-        tensor_info_sequences = tf.saved_model.utils.build_tensor_info(self.inputs['sequences'])
-        tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model_return.predictions)
-        tensor_info_context_probabilities = tf.saved_model.utils.build_tensor_info(model_return.context_probabilities)
+        tensor_info_sequence = tf.saved_model.utils.build_tensor_info(self.inputs['sequence'])
+        tensor_info_context = tf.saved_model.utils.build_tensor_info(self.inference['context'])
+        tensor_info_prediction = tf.saved_model.utils.build_tensor_info(self.inference['prediction'])
+        tensor_info_classification = tf.saved_model.utils.build_tensor_info(self.inference['classification'])
 
         prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
-                inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
-                outputs={'predictions': tensor_info_predictions, 'contexts': tensor_info_context_probabilities},
+                inputs={
+                    'features': tensor_info_features, 
+                    'sequence': tensor_info_sequence},
+                outputs={
+                    'context': tensor_info_context,
+                    'prediction': tensor_info_prediction, 
+                    'classification': tensor_info_classification},
                 method_name="attention_prediction_signature")
+
+        print "prediction signature op names"
+        print "features: {}".format(self.inputs['features'])
+        print "sequence: {}".format(self.inputs['sequence'])
+        print "context: {}".format(self.inference['context'])
+        print "prediction: {}".format(self.inference['prediction'])
+        print "classification: {}".format(self.inference['classification'])
         
         return prediction_signature
+    
+    def _build_inference_graph(self, sequence, features):
+        """Build inference graph and populate inference ops.
+        
+        :param sequence : tensorflow placeholder associated with sequence of model input
+        :param features : tensorflow placeholder associated with annotation vectors of model input
+        """
+
+        # Get initial LSTM states for each sequence in batch (N x H)
+        memory_state, hidden_state = get_initial_lstm(features=features,
+                                                      model_config=self._model_config,
+                                                      parameter_policy=self._parameter_policy)
+
+        # Get hidden states for each sequence in batch (N x H)
+        for t in range(self._model_config.sequence_length):
+            with tf.variable_scope('update_lstm', reuse=(t != 0)):
+                _, (memory_state, hidden_state) = self._lstm_cell(inputs=sequence[:, t, :],
+                                                                 state=[memory_state, hidden_state])
+
+        # Compute context probabilities for each sequence in batch conditioned on hidden states (N x L)
+        context_probabilities = compute_context_probabilities(features=features,
+                                                              hidden_state=hidden_state,
+                                                              model_config=self._model_config,
+                                                              parameter_policy=self._parameter_policy,
+                                                              reuse=None)
+
+        # Select context based on attention probabilities.
+        context = select_context(features, context_probabilities, model_config=self._model_config)  # (N x D)
+
+        # model inferences
+        logit = decode_lstm(hidden_state=hidden_state,
+                            context=context,
+                            model_config=self._model_config,
+                            parameter_policy=self._parameter_policy,
+                            reuse=None)
+
+        prediction = tf.sigmoid(logit, name="prediction")
+        classification = tf.round(prediction, name="classification")
+
+        self._model_inference = {"context": context,
+                                 "logit": logit, 
+                                 "prediction": prediction, 
+                                 "classification": classification}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Attention Layers
