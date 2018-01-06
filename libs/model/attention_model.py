@@ -1,34 +1,24 @@
 import tensorflow as tf
 import numpy as np
 
-from komorebi.libs.model.abstract_model import AbstractTensorflowModel
+from komorebi.libs.model.abstract_model import abstract_tensorflow_model
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
-from komorebi.libs.model.model_return_types import AttentionModelReturn 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
+from komorebi.libs.utilities.tf_utils import load_inference_graph_into_session
 
 
-class AttentionModel(AbstractTensorflowModel):
+class AttentionModel(abstract_tensorflow_model):
 
-    def __init__(self, attention_config, parameter_policy):
-        """Initialize attention model.
+    def __init__(self, attention_config=None, parameter_policy=None):
+        """Initialize attention model."""
 
-        :param attention_config:
-            Configuration object for specifying attention model.
-        :param parameter_policy:
-            Policy specifying weight and bias initialization.
-        """
-        assert isinstance(attention_config, AttentionConfiguration)
-        assert isinstance(parameter_policy, ParameterInitializationPolicy)
-
-        self._model_config = attention_config
-        self._parameter_policy = parameter_policy
+        if attention_config or parameter_policy:
+            self._initialize_training_model(attention_config=attention_config, parameter_policy=parameter_policy)
 
         self._model_inputs = None
         self._model_outputs = None
         self._model_inference = None
 
-        # initialize LSTM for attention model
-        self._lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
     
     @property
     def inference(self):
@@ -67,7 +57,7 @@ class AttentionModel(AbstractTensorflowModel):
 
     @property
     def outputs(self):
-        """Return tf.placeholders for holding outputs of model.
+        """Return tf.placeholders for holding labels for training model.
 
         :return:
             Dictionary with following attributes.
@@ -108,9 +98,26 @@ class AttentionModel(AbstractTensorflowModel):
         print "classification: {}".format(self.inference['classification'])
         
         return prediction_signature
+
+    def load_trained_model(self, trained_model_directory, sess):
+        """Populate model ops based on trained model directory.
+
+        :param trained_model_directory: directory containing tensorflow .pb trained model
+        :param sess: tensorflow session
+        """
+        graph = load_inference_graph_into_session(trained_model_directory, sess)
+
+        self._model_inputs = {
+                "sequence": graph.get_tensor_by_name("model_inputs/sequence:0"),
+                "features": graph.get_tensor_by_name("model_inputs/features:0")}
+
+        self._model_inference = {
+                "context": graph.get_tensor_by_name("context:0"), 
+                "prediction": graph.get_tensor_by_name("prediction:0"), 
+                "classification": graph.get_tensor_by_name("classification:0")}
     
     def _build_inference_graph(self, sequence, features):
-        """Build inference graph and populate inference ops.
+        """Populate inference ops by specify model architecture.
         
         :param sequence : tensorflow placeholder associated with sequence of model input
         :param features : tensorflow placeholder associated with annotation vectors of model input
@@ -151,6 +158,22 @@ class AttentionModel(AbstractTensorflowModel):
                                  "logit": logit, 
                                  "prediction": prediction, 
                                  "classification": classification}
+    
+    def _initialize_training_model(self, attention_config, parameter_policy):
+        """Initialization logic for training model.
+
+        :param attention_config:
+            Configuration object for specifying attention model.
+        :param parameter_policy:
+            Policy specifying weight and bias initialization.
+        """
+        assert isinstance(attention_config, AttentionConfiguration)
+        assert isinstance(parameter_policy, ParameterInitializationPolicy)
+
+        self._model_config = attention_config
+        self._parameter_policy = parameter_policy
+        self._lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Attention Layers

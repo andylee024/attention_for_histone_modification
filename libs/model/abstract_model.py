@@ -1,16 +1,12 @@
 import abc
 
-class AbstractTensorflowModel(object):
+class abstract_tensorflow_model(object):
     """Abstract base class specific to tensorflow models."""
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
-    def inference(self, *args):
-        """Compute model prediction.
-
-        :param *args : input data X specific to model
-        :return : dictionary of inference ops specific to inference
-        """
+    def inference(self):
+        """Return inference ops."""
         pass
 
     @abc.abstractproperty
@@ -36,3 +32,13 @@ class AbstractTensorflowModel(object):
     @abc.abstractmethod
     def _build_inference_graph(self, *args):
         """Build inference graph associated with model architecture."""
+        pass
+
+    @abc.abstractmethod
+    def load_trained_model(self, trained_model_directory, sess):
+        """Populate model ops based on trained model directory.
+
+        :param trained_model_directory: directory containing tensorflow .pb trained model
+        :param sess: tensorflow session
+        """
+        pass
