@@ -1,37 +1,128 @@
 import tensorflow as tf
 import numpy as np
 
-from komorebi.libs.model.abstract_model import AbstractTensorflowModel
+from komorebi.libs.model.abstract_model import abstract_tensorflow_model
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
-from komorebi.libs.model.model_return_types import AttentionModelReturn 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
+from komorebi.libs.utilities.tf_utils import load_inference_graph_into_session
 
 
-class AttentionModel(AbstractTensorflowModel):
+class AttentionModel(abstract_tensorflow_model):
 
-    def __init__(self, attention_config, parameter_policy):
-        """Initialize attention model.
+    def __init__(self, attention_config=None, parameter_policy=None):
+        """Initialize attention model."""
 
-        :param attention_config:
-            Configuration object for specifying attention model.
-        :param parameter_policy:
-            Policy specifying weight and bias initialization.
+        if attention_config or parameter_policy:
+            self._initialize_training_model(attention_config=attention_config, parameter_policy=parameter_policy)
+
+        self._model_inputs = None
+        self._model_outputs = None
+        self._model_inference = None
+
+    
+    @property
+    def inference(self):
+        """Perform inference for attention model.
+
+        :return: dictionary of inference ops 
+            "context"           : context probabilities for annotations
+            "logit"             : unnormalized logits 
+            "prediction"        : prediction probabilities for each class
+            "classification"    : binary classification based on prediction probabilities 
         """
-        assert isinstance(attention_config, AttentionConfiguration)
-        assert isinstance(parameter_policy, ParameterInitializationPolicy)
-        self._model_config = attention_config
-        self._parameter_policy = parameter_policy
+        if self._model_inference is None:
+            self._build_inference_graph(sequence=self.inputs['sequence'], features=self.inputs['features'])
+        return self._model_inference
+   
+    @property
+    def inputs(self):
+        """Return tf.placeholders for holding inputs of model.
 
-        # initialize LSTM for attention model
-        self.lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
-
-    def predict(self, features, sequences):
-        """Compute predictions for attention model.
-
-        :param features: tf.placeholder populated with convolutional annotation vectors.
-        :param sequences: tf.placeholder populated with sequence data.
-        :return: attention return type
+        :return:
+            Dictionary with following attributes.
+                "sequence" :   placeholder of shape (batch_size, sequence_length, vocabulary_size)
+                "features"  :   placeholder of shape (batch_size, number_annotations, annotation_size)
         """
+        if self._model_inputs is None:
+            with tf.variable_scope('model_inputs', reuse=False):
+                features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
+                sequence_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
+
+                features = tf.placeholder(dtype=tf.float32, shape=features_shape, name="features")
+                sequence = tf.placeholder(dtype=tf.float32, shape=sequence_shape, name="sequence")
+
+                self._model_inputs = {'sequence' : sequence, 'features'  : features} 
+
+        return self._model_inputs
+
+    @property
+    def outputs(self):
+        """Return tf.placeholders for holding labels for training model.
+
+        :return:
+            Dictionary with following attributes.
+                "labels" : placeholder of shape (batch_size, prediction_classes)
+        """
+        if self._model_outputs is None:
+            labels_shape = (None, self._model_config.prediction_classes)
+            self._model_outputs = {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape, name="labels")}
+        return self._model_outputs
+
+    @property
+    def prediction_signature(self):
+        """Return prediction signature of model for serving.
+        
+        :return: tensorflow signature for prediction
+        """
+        tensor_info_features = tf.saved_model.utils.build_tensor_info(self.inputs['features'])
+        tensor_info_sequence = tf.saved_model.utils.build_tensor_info(self.inputs['sequence'])
+        tensor_info_context = tf.saved_model.utils.build_tensor_info(self.inference['context'])
+        tensor_info_prediction = tf.saved_model.utils.build_tensor_info(self.inference['prediction'])
+        tensor_info_classification = tf.saved_model.utils.build_tensor_info(self.inference['classification'])
+
+        prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
+                inputs={
+                    'features': tensor_info_features, 
+                    'sequence': tensor_info_sequence},
+                outputs={
+                    'context': tensor_info_context,
+                    'prediction': tensor_info_prediction, 
+                    'classification': tensor_info_classification},
+                method_name="attention_prediction_signature")
+
+        print "prediction signature op names"
+        print "features: {}".format(self.inputs['features'])
+        print "sequence: {}".format(self.inputs['sequence'])
+        print "context: {}".format(self.inference['context'])
+        print "prediction: {}".format(self.inference['prediction'])
+        print "classification: {}".format(self.inference['classification'])
+        
+        return prediction_signature
+
+    def load_trained_model(self, trained_model_directory, sess):
+        """Populate model ops based on trained model directory.
+
+        :param trained_model_directory: directory containing tensorflow .pb trained model
+        :param sess: tensorflow session
+        """
+        graph = load_inference_graph_into_session(trained_model_directory, sess)
+
+        self._model_inputs = {
+                "sequence": graph.get_tensor_by_name("model_inputs/sequence:0"),
+                "features": graph.get_tensor_by_name("model_inputs/features:0")}
+
+        self._model_inference = {
+                "context": graph.get_tensor_by_name("context:0"), 
+                "prediction": graph.get_tensor_by_name("prediction:0"), 
+                "classification": graph.get_tensor_by_name("classification:0")}
+    
+    def _build_inference_graph(self, sequence, features):
+        """Populate inference ops by specify model architecture.
+        
+        :param sequence : tensorflow placeholder associated with sequence of model input
+        :param features : tensorflow placeholder associated with annotation vectors of model input
+        """
+
         # Get initial LSTM states for each sequence in batch (N x H)
         memory_state, hidden_state = get_initial_lstm(features=features,
                                                       model_config=self._model_config,
@@ -40,7 +131,7 @@ class AttentionModel(AbstractTensorflowModel):
         # Get hidden states for each sequence in batch (N x H)
         for t in range(self._model_config.sequence_length):
             with tf.variable_scope('update_lstm', reuse=(t != 0)):
-                _, (memory_state, hidden_state) = self.lstm_cell(inputs=sequences[:, t, :],
+                _, (memory_state, hidden_state) = self._lstm_cell(inputs=sequence[:, t, :],
                                                                  state=[memory_state, hidden_state])
 
         # Compute context probabilities for each sequence in batch conditioned on hidden states (N x L)
@@ -53,61 +144,36 @@ class AttentionModel(AbstractTensorflowModel):
         # Select context based on attention probabilities.
         context = select_context(features, context_probabilities, model_config=self._model_config)  # (N x D)
 
-        # get logits
-        logits = decode_lstm(hidden_state=hidden_state,
-                             context=context,
-                             model_config=self._model_config,
-                             parameter_policy=self._parameter_policy,
-                             reuse=None)
+        # model inferences
+        logit = decode_lstm(hidden_state=hidden_state,
+                            context=context,
+                            model_config=self._model_config,
+                            parameter_policy=self._parameter_policy,
+                            reuse=None)
 
-        return AttentionModelReturn(predictions=logits, context_probabilities=context_probabilities)
-   
-    @property
-    def inputs(self):
-        """Return tf.placeholders for holding inputs of model.
+        prediction = tf.sigmoid(logit, name="prediction")
+        classification = tf.round(prediction, name="classification")
 
-        :return:
-            Dictionary with following attributes.
-                "features"  :   placeholder of shape (batch_size, number_annotations, annotation_size)
-                "sequences" :   placeholder of shape (batch_size, sequence_length, vocabulary_size)
+        self._model_inference = {"context": context,
+                                 "logit": logit, 
+                                 "prediction": prediction, 
+                                 "classification": classification}
+    
+    def _initialize_training_model(self, attention_config, parameter_policy):
+        """Initialization logic for training model.
+
+        :param attention_config:
+            Configuration object for specifying attention model.
+        :param parameter_policy:
+            Policy specifying weight and bias initialization.
         """
-        features_shape = (None, self._model_config.number_of_annotations, self._model_config.annotation_size)
-        sequences_shape = (None, self._model_config.sequence_length, self._model_config.vocabulary_size)
+        assert isinstance(attention_config, AttentionConfiguration)
+        assert isinstance(parameter_policy, ParameterInitializationPolicy)
 
-        return {'features'  : tf.placeholder(dtype=tf.float32, shape=features_shape),
-                'sequences' : tf.placeholder(dtype=tf.float32, shape=sequences_shape)}
+        self._model_config = attention_config
+        self._parameter_policy = parameter_policy
+        self._lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
 
-    @property
-    def outputs(self):
-        """Return tf.placeholders for holding outputs of model.
-
-        :return:
-            Dictionary with following attributes.
-                "labels" : placeholder of shape (batch_size, prediction_classes)
-        """
-        labels_shape = (None, self._model_config.prediction_classes)
-        return {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape)}
-
-    @property
-    def prediction_signature(self):
-        """Return prediction signature of model for serving.
-        
-        :return: tensorflow signature for prediction
-        """
-        model_return = self.predict(features=self.inputs['features'], 
-                                    sequences=self.inputs['sequences'])
-
-        tensor_info_features = tf.saved_model.utils.build_tensor_info(self.inputs['features'])
-        tensor_info_sequences = tf.saved_model.utils.build_tensor_info(self.inputs['sequences'])
-        tensor_info_predictions = tf.saved_model.utils.build_tensor_info(model_return.predictions)
-        tensor_info_context_probabilities = tf.saved_model.utils.build_tensor_info(model_return.context_probabilities)
-
-        prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
-                inputs={'features': tensor_info_features, 'sequences': tensor_info_sequences},
-                outputs={'predictions': tensor_info_predictions, 'contexts': tensor_info_context_probabilities},
-                method_name="attention_prediction_signature")
-        
-        return prediction_signature
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Attention Layers
@@ -175,8 +241,8 @@ def attention_project_features(features, model_config, parameter_policy, reuse=F
         Weighted transformation of features (N x L x D).
     """
     features_shape = (get_batch_size(features),
-                      model_config.number_of_annotations,
-                      model_config.annotation_size)  # (N x L x D)
+                        model_config.number_of_annotations,
+                        model_config.annotation_size)  # (N x L x D)
     flatten_shape = (-1, model_config.annotation_size)  # converts tensor to to (NL x D)
     weight_shape = (model_config.annotation_size, model_config.annotation_size)  # (D x D)
 
@@ -341,7 +407,7 @@ def select_context(features, context_probabilities, model_config):
     """
     selected_context_indices = tf.argmax(context_probabilities, axis=1, output_type=tf.int32)
     gather_indices = convert_to_gather_indices(selected_context_indices, batch_size=get_batch_size(features))
-    return tf.gather_nd(params=features, indices=gather_indices)
+    return tf.gather_nd(params=features, indices=gather_indices, name="context")
 
 
 def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=False):
@@ -379,7 +445,8 @@ def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=Fal
 
         hidden_contribution = tf.matmul(hidden_state, w_hidden)
         context_contribution = tf.matmul(context, w_context)
-        logits = hidden_contribution + context_contribution + bias_out
+
+        logits = tf.add(x=tf.add(hidden_contribution, context_contribution), y=bias_out, name="logits")
         return logits
 
 

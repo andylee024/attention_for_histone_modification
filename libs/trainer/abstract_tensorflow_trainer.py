@@ -89,6 +89,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
 
+
     @abc.abstractmethod
     def _build_computational_graph(self, model, optimizer):
         """Construct a computational graph for training a model.

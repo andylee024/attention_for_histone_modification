@@ -33,10 +33,17 @@ class tf_dataset_wrapper(object):
         :return: iterator object
         """
         tf_dataset = tf.data.TFRecordDataset(self.input_examples_op)
-        tf_dataset = tf_dataset.prefetch(buffer_size)
-        tf_dataset = tf_dataset.map(map_func=self._parse_function, num_parallel_calls=parallel_calls)
-        tf_dataset = tf_dataset.batch(batch_size)
+        tf_dataset = _build_specialized_dataset(tf_dataset=tf_dataset, 
+                                                parse_function=self._parse_function,
+                                                batch_size=batch_size,
+                                                buffer_size=buffer_size,
+                                                parallel_calls=parallel_calls)
         self._iterator = tf_dataset.make_initializable_iterator()
+
+    def build_one_shot_iterator(self):
+        """Build a one-shot iterator for dataset."""
+        tf_dataset = tf.data.TFRecordDataset(self.input_examples_op)
+        self._iterator = tf_dataset.make_one_shot_iterator()
 
     @property
     def number_of_examples(self):
@@ -49,6 +56,22 @@ class tf_dataset_wrapper(object):
         if self._iterator is None:
             raise RuntimeError("Iterator is not initialized for dataset!")
         return self._iterator
+
+
+def _build_specialized_dataset(tf_dataset, parse_function, batch_size, buffer_size, parallel_calls):
+    """Build and return tensorflow dataset with specified configurations for iterating.
+    
+    :param tf_dataset: base tensorflow dataset to transform
+    :param parse_function: function used to parse dataset examples 
+    :param batch_size: batch_size of returned examples
+    :param buffer_size: number of examples to buffer in memory 
+    :param parallel_calls: number of threads to spin off for processing input files
+    :return: dataset object
+    """
+    tf_dataset = tf_dataset.prefetch(buffer_size)
+    tf_dataset = tf_dataset.map(map_func=parse_function, num_parallel_calls=parallel_calls)
+    tf_dataset = tf_dataset.batch(batch_size)
+    return tf_dataset
 
 
 def _get_input_examples_op():

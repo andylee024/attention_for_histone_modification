@@ -1,4 +1,3 @@
-
 class AttentionConfiguration(object):
     """Configuration object containing parameters to attention model."""
 
@@ -30,3 +29,4 @@ class AttentionConfiguration(object):
         self.number_of_annotations = number_of_annotations
         self.annotation_size = annotation_size
         self.hidden_state_dimension = hidden_state_dimension
+
