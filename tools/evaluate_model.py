@@ -1,63 +1,59 @@
-import numpy as np
-import os
-import sklearn.metrics
+import argparse
+import sys
 import tensorflow as tf
 
-from komorebi.libs.dataset.types.dataset_config import DatasetConfiguration
 from komorebi.libs.dataset.types.tf_dataset_wrapper import tf_dataset_wrapper 
+from komorebi.libs.evaluator.evaluator import Evaluator
 from komorebi.libs.model.attention_model import AttentionModel
-from komorebi.libs.trainer.trainer_utils import compute_number_of_batches, get_data_stream_for_epoch
+from komorebi.libs.utilities.create_config import create_dataset_configuration
 
-TRAINED_MODEL_DIRECTORY = "/tmp/attention_experiment_test/trained_model"
-TF_VALIDATION_DATSET = "/Users/andy/Projects/attention_histone_modification/datasets/attention_validation_tf_dataset"
-
-def _load_dataset():
-    """Load tensorflow dataset for evaluation."""
-    dataset_config = DatasetConfiguration(dataset_name='validation_dataset', 
-                                          examples_directory=TF_VALIDATION_DATSET)
-    return tf_dataset_wrapper(dataset_config)
-
-def _load_model():
-    return AttentionModel()
-
-def main():
-    # setup evaluation objects
-    dataset = _load_dataset()
-    model = _load_model()
-
-    # setup evaluation ops
-    dataset.build_input_pipeline_iterator(batch_size=1, buffer_size=100, parallel_calls=2)
+def main(args):
     init_op = tf.global_variables_initializer()
     
     with tf.Session() as sess:
+        dataset = _load_dataset(args.dataset)
+        model = _load_model(args.model, sess)
+        evaluator = _load_evaluator() 
+
         sess.run(init_op)
+        evaluator.score_model(model, dataset, sess)
 
-        model.load_trained_model(TRAINED_MODEL_DIRECTORY, sess)
-        data_stream_op = get_data_stream_for_epoch(dataset, sess)
-        
-        # run evaluation
-        data = sess.run(data_stream_op)
+# ----------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------
 
-
-        classification = sess.run(
-                model.inference['classification'], 
-                feed_dict={
-                    model.inputs['sequence']: data['sequence'],
-                    model.inputs['features']: data['annotation']})
-
-
-        print "predictions_shape: {}".format(classification.shape)
-        print "labels_shape: {}".format(data['label'].shape)
-
-        accuracy = sklearn.metrics.accuracy_score(np.ravel(data['label']), np.ravel(classification), normalize=True)
-        print "accuracy: {}".format(accuracy)
-        
-        accuracy_unflat = sklearn.metrics.accuracy_score(data['label'], classification, normalize=True)
-        print "unflattened accuracy:{}".format(accuracy_unflat)
+def _load_model(trained_model_directory, sess):
+    """Return trained model associated with trained model directory.
     
+    :param trained_model_directory: directory containing trained model .pb file
+    :param sess: tensorflow session
+    :return: model object satisfying abstract model interface
+    """
+    model = AttentionModel()
+    model.load_trained_model(trained_model_directory, sess)
+    return model
+
+
+def _load_dataset(dataset_json):
+    """Return tensorflow dataset associated with supplied dataset json configuration.
     
+    :param dataset_json: json config file associated dataset
+    :return: tensorflow dataset
+    """
+    dataset_config = create_dataset_configuration(dataset_json)
+    return tf_dataset_wrapper(dataset_config)
+
+
+def _load_evaluator():
+    """Return evaluator object."""
+    return Evaluator()
+    
+# ----------------------------------------------------------------
+# Command line interface
+# ----------------------------------------------------------------
 if __name__ == "__main__":
-    main()
-
-
-
+    parser = argparse.ArgumentParser(description="Command line tool for evaluating trained tensorflow models.")
+    parser.add_argument("-d", "--dataset", type=str, required=True, help="Configuration json for dataset.")
+    parser.add_argument("-m", "--model", type=str, help="Directory containing trained .pb model file.")
+    args = parser.parse_args(sys.argv[1:])
+    main(args)
