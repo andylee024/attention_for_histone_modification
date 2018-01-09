@@ -5,12 +5,15 @@ from tqdm import trange
 
 from komorebi.libs.trainer.trainer_utils import get_data_stream_for_epoch
 from komorebi.libs.evaluator.metric_types import example_score
+from komorebi.libs.evaluator.task_scorer import multitask_scorer
+
+TOTAL_TASKS = 919
 
 class Evaluator(object):
     """Class for evaluating tensorflow models on a dataset."""
     
     def __init__(self):
-        pass
+        self._multitask_scorer = multitask_scorer(total_tasks=TOTAL_TASKS)
 
     def score_model(self, model, dataset, sess):
         """Evaluate model on dataset.
@@ -20,12 +23,11 @@ class Evaluator(object):
         :param sess: tensorflow session
         """
         data_stream_op = _build_evaluation_datastream(dataset, sess)
-
-        examples_scores = [
-                _evaluate_training_example(model=model, training_example=sess.run(data_stream_op), sess=sess) 
-                for _ in trange(dataset.number_of_examples, desc="evaluation_progress")]
-
-        print "average_accuracy: {}".format(np.mean([es.accuracy for es in examples_scores]))
+        for _ in trange(dataset.number_of_examples, desc="evaluation_progress"):
+            es = _convert_training_example_to_score(
+                    model=model, training_example=sess.run(data_stream_op), sess=sess)
+            self._multitask_scorer.add_example_score(classifications=es.classification, labels=es.label)
+        print "total_predictions (919*8000): {}".format(len(self._multitask_scorer.example_scores))
 
 
 def _build_evaluation_datastream(dataset, sess):
@@ -43,7 +45,7 @@ def _build_evaluation_datastream(dataset, sess):
     return data_stream_op
 
 
-def _evaluate_training_example(model, training_example, sess):
+def _convert_training_example_to_score(model, training_example, sess):
     """Evaluate single training example.
     
     :param model: trained tensorflow model statisfying abstract model interface
@@ -60,7 +62,5 @@ def _evaluate_training_example(model, training_example, sess):
     classification = np.ravel(classification)
     label = np.ravel(training_example['label'])
 
-    # compute metrics
-    accuracy = sklearn.metrics.accuracy_score(classification, label, normalize=True) 
-    return example_score(accuracy=accuracy)
+    return example_score(classification=classification, label=label)
         
