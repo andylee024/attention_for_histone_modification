@@ -40,7 +40,7 @@ class multitask_validation_point(object):
     def single_task_validation_points(self):
         """Convert multitask validation data to single task validation data."""
         return [validation_point(classification=c, probability_prediction=p, label=l) 
-                for (c, p, l) in zip(self.classifications, self,probability_predictions, self.labels)]
+                for (c, p, l) in zip(self.classifications, self.probability_predictions, self.labels)]
 
 
 class task_metrics(object):
