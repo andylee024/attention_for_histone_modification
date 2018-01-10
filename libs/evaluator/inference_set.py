@@ -12,7 +12,7 @@ class multitask_inference_set(object):
                 idx: single_task_inference_set(task_id=idx, task_name=_get_task_name_from_idx(idx))
                 for idx in range(total_tasks)}
 
-    def add_multitask_validation_point(multitask_vp):
+    def add_multitask_validation_point(self, multitask_vp):
         """Unpack multitask_validation_point to individual tasks.
         
         :param multitask_vp: multitask validation point object
@@ -20,7 +20,13 @@ class multitask_inference_set(object):
         assert isinstance(multitask_vp, multitask_validation_point)
         assert len(multitask_vp) == len(self._tasks)
         for (task_id, singletask_vp) in enumerate(multitask_vp.single_task_validation_points):
-            self._tasks[task_id].add_validation_point(singletask_vp)
+            task = self.get_task_by_id(task_id)
+            task.add_validation_point(singletask_vp) # this causes errors 
+
+            # TODO: all the tasks are linked which should not be the case. Why is this happening?
+            print "task0: {}".format(len(self.get_task_by_id(0)))
+            print "task1: {}".format(len(self.get_task_by_id(1)))
+            print "task2: {}".format(len(self.get_task_by_id(2)))
 
     def get_task_by_id(self, task_id):
         """Retrieve inference set of a single task based on task_id
@@ -35,6 +41,7 @@ class multitask_inference_set(object):
         """Return validation points of all tasks."""
         validation_points = []
         for task in self._tasks.itervalues():
+            print "number of validation points for task: {}".format(len(task.validation_points)) # this is wrong
             validation_points.extend(task.validation_points)
         return validation_points
 
@@ -74,13 +81,16 @@ class single_task_inference_set(object):
         self.task_name = task_name
         self.validation_points = validation_points
 
+    def __len__(self):
+        return len(self.validation_points)
+
     def add_validation_point(self, vp):
         """Add validation point to task.
 
         :param vp: validation point containing label and inference quantities
         """
         assert isinstance(vp, validation_point)
-        self.add_validation_points.append(vp)
+        self.validation_points.append(vp)
 
     @property
     def classifications(self):
