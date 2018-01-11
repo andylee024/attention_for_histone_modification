@@ -35,35 +35,11 @@ class multitask_inference_set(object):
    
     @property
     def validation_points(self):
-        """Return validation points of all tasks."""
+        """Return validation points aggregated across all tasks."""
         validation_points = []
         for task in self._tasks.itervalues():
             validation_points.extend(task.validation_points)
         return validation_points
-
-    @property
-    def classifications(self):
-        """Return classifications of all tasks."""
-        classifications = []
-        for task in self._tasks.itervalues():
-            classifications.extend(task.classifications)
-        return classifications
-
-    @property
-    def labels(self):
-        """Return labels of all tasks."""
-        labels = []
-        for task in self._tasks.itervalues():
-            labels.extend(task.labels)
-        return labels
-
-    @property
-    def probability_predictions(self):
-        """Return probability predictions of all tasks."""
-        probability_predictions = []
-        for task in self._tasks.itervalues():
-            probability_predictions.extend(task.probability_predictions)
-        return probability_predictions
 
 
 class single_task_inference_set(object):
@@ -90,18 +66,6 @@ class single_task_inference_set(object):
         """
         assert isinstance(vp, validation_point)
         self.validation_points.append(vp)
-
-    @property
-    def classifications(self):
-        return [vp.classification for vp in self.validation_points]
-
-    @property
-    def labels(self):
-        return [vp.label for vp in self.validation_points]
-
-    @property
-    def probability_predictions(self):
-        return [vp.probability_prediction for vp in self.validation_points]
 
 def _get_task_name_from_idx(idx):
     """Create name for task based on index."""

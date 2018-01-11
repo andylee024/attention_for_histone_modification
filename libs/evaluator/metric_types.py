@@ -38,7 +38,7 @@ class multitask_validation_point(object):
 
     @property
     def single_task_validation_points(self):
-        """Convert multitask validation data to single task validation data."""
+        """Convert multitask validation point to list of single task validation points."""
         return [validation_point(classification=c, probability_prediction=p, label=l) 
                 for (c, p, l) in zip(self.classifications, self.probability_predictions, self.labels)]
 
@@ -53,7 +53,7 @@ class task_metrics(object):
             positive_accuracy,
             negative_accuracy,
             accuracy,
-            cross_entropy_loss):
+            cross_entropy):
         """Initialize struct
         
         :param positive_examples: number of positive examples
@@ -70,7 +70,18 @@ class task_metrics(object):
         self.negative_accuracy = negative_accuracy
         self.accuracy = accuracy
 
-        self.cross_entropy_loss = cross_entropy_loss
+        self.cross_entropy = cross_entropy
+
+    def __str__(self):
+        s1 = "total_examples: {}".format(self.total_examples)
+        s2 = "positive_examples: {}".format(self.positive_examples)
+        s3 = "negative_examples: {}".format(self.negative_examples)
+        s4 = "positive_accuracy: {}".format(self.positive_accuracy)
+        s5 = "negative_accuracy: {}".format(self.negative_accuracy)
+        s6 = "total_accuracy: {}".format(self.accuracy)
+        s7 = "cross_entropy: {}".format(self.cross_entropy)
+        return "\n".join([s1, s2, s3, s4, s5, s6, s7])
+
     @property 
     def total_examples(self):
         return self.positive_examples + self.negative_examples

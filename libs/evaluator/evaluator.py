@@ -4,8 +4,9 @@ import tensorflow as tf
 from tqdm import trange
 
 from komorebi.libs.trainer.trainer_utils import get_data_stream_for_epoch
-from komorebi.libs.evaluator.metric_types import example_score
-from komorebi.libs.evaluator.task_scorer import multitask_scorer
+from komorebi.libs.evaluator.inference_set import multitask_inference_set
+from komorebi.libs.evaluator.metric_types import multitask_validation_point
+from komorebi.libs.evaluator.metrics import compute_task_metrics
 
 TOTAL_TASKS = 919
 
@@ -13,7 +14,7 @@ class Evaluator(object):
     """Class for evaluating tensorflow models on a dataset."""
     
     def __init__(self):
-        self._multitask_scorer = multitask_scorer(total_tasks=TOTAL_TASKS)
+        self._inference_set = multitask_inference_set(total_tasks=TOTAL_TASKS)
 
     def score_model(self, model, dataset, sess):
         """Evaluate model on dataset.
@@ -24,10 +25,11 @@ class Evaluator(object):
         """
         data_stream_op = _build_evaluation_datastream(dataset, sess)
         for _ in trange(dataset.number_of_examples, desc="evaluation_progress"):
-            es = _convert_training_example_to_score(
+            multitask_vp = _convert_example_to_multitask_validation_point(
                     model=model, training_example=sess.run(data_stream_op), sess=sess)
-            self._multitask_scorer.add_example_score(classifications=es.classification, labels=es.label)
-        print "total_predictions (919*8000): {}".format(len(self._multitask_scorer.example_scores))
+            self._inference_set.add_multitask_validation_point(multitask_vp)
+
+        return compute_task_metrics(self._inference_set)
 
 
 def _build_evaluation_datastream(dataset, sess):
@@ -45,22 +47,24 @@ def _build_evaluation_datastream(dataset, sess):
     return data_stream_op
 
 
-def _convert_training_example_to_score(model, training_example, sess):
+def _convert_example_to_multitask_validation_point(model, training_example, sess):
     """Evaluate single training example.
     
     :param model: trained tensorflow model statisfying abstract model interface
     :param training_example: single training example from dataset
     :return: score struct for training example
     """
-    prediction, classification = sess.run(
+    probabilities, classification = sess.run(
             [model.inference['prediction'], model.inference['classification']],
             feed_dict={model.inputs['sequence']: training_example['sequence'],
                        model.inputs['features']: training_example['annotation']})
     
     # convert to 1-D arrays
-    prediction = np.ravel(prediction)
-    classification = np.ravel(classification)
-    label = np.ravel(training_example['label'])
+    probabilities = np.ravel(probabilities)
+    classifications = np.ravel(classification)
+    labels = np.ravel(training_example['label'])
+    
+    return multitask_validation_point(
+            classifications=classifications, probability_predictions=probabilities, labels=labels)
 
-    return example_score(classification=classification, label=label)
         
