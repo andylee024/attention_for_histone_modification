@@ -19,14 +19,11 @@ class multitask_inference_set(object):
         """
         assert isinstance(multitask_vp, multitask_validation_point)
         assert len(multitask_vp) == len(self._tasks)
+        
+        singletask_vps = multitask_vp.single_task_validation_points
         for (task_id, singletask_vp) in enumerate(multitask_vp.single_task_validation_points):
             task = self.get_task_by_id(task_id)
-            task.add_validation_point(singletask_vp) # this causes errors 
-
-            # TODO: all the tasks are linked which should not be the case. Why is this happening?
-            print "task0: {}".format(len(self.get_task_by_id(0)))
-            print "task1: {}".format(len(self.get_task_by_id(1)))
-            print "task2: {}".format(len(self.get_task_by_id(2)))
+            task.add_validation_point(singletask_vp)
 
     def get_task_by_id(self, task_id):
         """Retrieve inference set of a single task based on task_id
@@ -41,7 +38,6 @@ class multitask_inference_set(object):
         """Return validation points of all tasks."""
         validation_points = []
         for task in self._tasks.itervalues():
-            print "number of validation points for task: {}".format(len(task.validation_points)) # this is wrong
             validation_points.extend(task.validation_points)
         return validation_points
 
@@ -49,37 +45,40 @@ class multitask_inference_set(object):
     def classifications(self):
         """Return classifications of all tasks."""
         classifications = []
-        for task in self_tasks.itervalues():
+        for task in self._tasks.itervalues():
             classifications.extend(task.classifications)
+        return classifications
 
     @property
     def labels(self):
         """Return labels of all tasks."""
         labels = []
-        for task in self_tasks.itervalues():
+        for task in self._tasks.itervalues():
             labels.extend(task.labels)
+        return labels
 
     @property
     def probability_predictions(self):
         """Return probability predictions of all tasks."""
         probability_predictions = []
-        for task in self_tasks.itervalues():
+        for task in self._tasks.itervalues():
             probability_predictions.extend(task.probability_predictions)
-
+        return probability_predictions
 
 
 class single_task_inference_set(object):
     """Class containing metrics for a single classification problem."""
     
-    def __init__(self, task_id, task_name, validation_points=[]):
+    def __init__(self, task_id, task_name):
         """Initailize task scorer.
         
         :param task_id: Int. Identifies task in multitask settings. 
         :param task_name: Str. Description of prediction task.
+        :param validation_points
         """
         self.task_id = task_id
         self.task_name = task_name
-        self.validation_points = validation_points
+        self.validation_points = []
 
     def __len__(self):
         return len(self.validation_points)
@@ -102,9 +101,9 @@ class single_task_inference_set(object):
 
     @property
     def probability_predictions(self):
-        return [vp.probabiity_prediction for vp in self.validation_points]
-
+        return [vp.probability_prediction for vp in self.validation_points]
 
 def _get_task_name_from_idx(idx):
     """Create name for task based on index."""
     return "task_{}".format(idx) 
+

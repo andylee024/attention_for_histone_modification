@@ -27,6 +27,7 @@ class test_multitask_inference_set(unittest.TestCase):
         """Test that multitask validation points passed to single task correctly."""
         inference_set = multitask_inference_set(total_tasks=3)
 
+        expected_validation_points = 3
         expected_classifications = [0, 0, 0]
         expected_labels = [1, 1, 1]
         expected_probability_predictions = [1.0, 1.0, 1.0]
@@ -36,9 +37,7 @@ class test_multitask_inference_set(unittest.TestCase):
                                            probability_predictions=expected_probability_predictions)
         inference_set.add_multitask_validation_point(mt_vp)
        
-        expected_validation_points = 3
         self.assertEqual(len(inference_set.validation_points), expected_validation_points)
-
         self.assertListEqual(inference_set.classifications, expected_classifications)
         self.assertListEqual(inference_set.probability_predictions, expected_probability_predictions)
         self.assertListEqual(inference_set.labels, expected_labels)

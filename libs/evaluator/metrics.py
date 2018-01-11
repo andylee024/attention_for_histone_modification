@@ -3,11 +3,18 @@
 import sklearn.metrics
 
 from komorebi.libs.evaluator.inference_set import single_task_inference_set
-from komorebi.libs.evaluator.metric_types import task_metrics 
+from komorebi.libs.evaluator.metric_types import task_metrics, validation_point
 
 def _create_inference_set(validation_points):
-    """Create inference set based on validation points."""
-    return single_task_inference_set(task_id="", task_name="", validation_points=validation_points)
+    """Create inference set based on validation points.
+    
+    :param validation_points: list of validation point objects
+    :return: inference set initialized with supplied validation points
+    """
+    assert all((isinstance(vp, validation_point) for vp in validation_points))
+    inference_set = single_task_inference_set(task_id="", task_name="")
+    inference_set.validation_points = validation_points
+    return inference_set
 
 
 def compute_task_metrics(inference_set):
@@ -30,4 +37,5 @@ def compute_task_metrics(inference_set):
                 y_true=inference_set.labels, y_pred=inference_set.classifications, normalize=True),
             cross_entropy_loss=sklearn.metrics.log_loss(
                 y_true=inference_set.labels, y_pred=inference_set.probability_predictions)
+
 
