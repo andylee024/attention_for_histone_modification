@@ -16,7 +16,8 @@ def main(args):
         evaluator = _load_evaluator() 
 
         sess.run(init_op)
-        evaluator.score_model(model, dataset, sess)
+        task_metrics = evaluator.score_model(model, dataset, sess)
+        print task_metrics
 
 # ----------------------------------------------------------------
 # Helpers
