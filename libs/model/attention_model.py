@@ -4,7 +4,7 @@ import numpy as np
 from komorebi.libs.model.abstract_model import abstract_tensorflow_model
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
-from komorebi.libs.utilities.tf_utils import load_inference_graph_into_session
+from komorebi.libs.utilities.tf_utils import load_checkpoint_into_session, load_inference_graph_into_session
 
 
 class AttentionModel(abstract_tensorflow_model):
@@ -105,16 +105,17 @@ class AttentionModel(abstract_tensorflow_model):
         :param trained_model_directory: directory containing tensorflow .pb trained model
         :param sess: tensorflow session
         """
-        graph = load_inference_graph_into_session(trained_model_directory, sess)
+        loaded_graph = load_inference_graph_into_session(trained_model_directory, sess)
+        self._populate_model_ops(loaded_graph)
 
-        self._model_inputs = {
-                "sequence": graph.get_tensor_by_name("model_inputs/sequence:0"),
-                "features": graph.get_tensor_by_name("model_inputs/features:0")}
+    def load_checkpoint_model(self, model_checkpoint, sess):
+        """Populate model ops based on model checkpoint.
 
-        self._model_inference = {
-                "context": graph.get_tensor_by_name("context:0"), 
-                "prediction": graph.get_tensor_by_name("prediction:0"), 
-                "classification": graph.get_tensor_by_name("classification:0")}
+        :param model_checkpoint: tesnorflow model checkpoint file
+        :param sess: tensorflow session
+        """
+        loaded_graph = load_checkpoint_into_session(model_checkpoint, sess)
+        self._populate_model_ops(loaded_graph)
     
     def _build_inference_graph(self, sequence, features):
         """Populate inference ops by specify model architecture.
@@ -173,6 +174,20 @@ class AttentionModel(abstract_tensorflow_model):
         self._model_config = attention_config
         self._parameter_policy = parameter_policy
         self._lstm_cell = tf.contrib.rnn.BasicLSTMCell(num_units=self._model_config.hidden_state_dimension)
+
+    def _populate_model_ops(self, loaded_graph):
+        """Populate model ops from a loaded tensorflow graph.
+
+        :param loaded_graph: tensorflow graph
+        """
+        self._model_inputs = {
+                "sequence": loaded_graph.get_tensor_by_name("model_inputs/sequence:0"),
+                "features": loaded_graph.get_tensor_by_name("model_inputs/features:0")}
+
+        self._model_inference = {
+                "context": loaded_graph.get_tensor_by_name("context:0"), 
+                "prediction": loaded_graph.get_tensor_by_name("prediction:0"), 
+                "classification": loaded_graph.get_tensor_by_name("classification:0")}
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import tensorflow as tf
 
@@ -8,22 +9,30 @@ from komorebi.libs.model.attention_model import AttentionModel
 from komorebi.libs.utilities.create_config import create_dataset_configuration
 
 def main(args):
+    _setup_device_environment(args)
+
     init_op = tf.global_variables_initializer()
-    
     with tf.Session() as sess:
         dataset = _load_dataset(args.dataset)
-        model = _load_model(args.model, sess)
+        model = _load_model(args, sess)
         evaluator = _load_evaluator() 
 
         sess.run(init_op)
         task_metrics = evaluator.score_model(model, dataset, sess)
+
         print task_metrics
 
 # ----------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------
 
-def _load_model(trained_model_directory, sess):
+def _setup_device_environment(args):
+    """Setup os environment to run either using cpu or gpu."""
+    if args.cpu:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
+
+def _load_model(args, sess):
     """Return trained model associated with trained model directory.
     
     :param trained_model_directory: directory containing trained model .pb file
@@ -31,7 +40,14 @@ def _load_model(trained_model_directory, sess):
     :return: model object satisfying abstract model interface
     """
     model = AttentionModel()
-    model.load_trained_model(trained_model_directory, sess)
+
+    if args.trained_model:
+        model.load_trained_model(trained_model_directory, sess)
+    elif args.checkpoint_model:
+        model.load_checkpoint_model(args.checkpoint_model, sess)
+    else:
+        raise ValueError("No model loading scheme specified (checkpoint or trained).")
+
     return model
 
 
@@ -54,7 +70,16 @@ def _load_evaluator():
 # ----------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command line tool for evaluating trained tensorflow models.")
+
     parser.add_argument("-d", "--dataset", type=str, required=True, help="Configuration json for dataset.")
-    parser.add_argument("-m", "--model", type=str, help="Directory containing trained .pb model file.")
+
+    model_parser = parser.add_mutually_exclusive_group()
+    model_parser.add_argument("-pb", "--trained-model", type=str, help="Directory containing trained .pb model file.")
+    model_parser.add_argument("-ck", "--checkpoint-model", type=str, help="Path to model checkpoint.")
+
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--cpu", action="store_true", help="If set, run tensorflow with cpu.")
+    mode.add_argument("--gpu", action="store_true", help="If set, run tensorflow with gpu.")
+
     args = parser.parse_args(sys.argv[1:])
     main(args)
