@@ -50,37 +50,65 @@ class task_metrics(object):
             self, 
             positive_examples,
             negative_examples,
-            positive_accuracy,
-            negative_accuracy,
-            accuracy,
+            total_accuracy,
+            true_positive_rate,
+            true_negative_rate,
+            precision,
+            recall,
+            f1_score,
+            auroc,
             cross_entropy):
         """Initialize struct
         
         :param positive_examples: number of positive examples
         :param negative_examples: number of negative examples
-        :param positive_accuracy: accuracy for positive examples
-        :param negative_accuracy: accuracy for negative examples
-        :param accuracy: accuracy for all examples
+        :param total_accuracy: percentage of correctly classified examples
+        :param true_positive_rate: percentage of correctly classified positive examples
+        :param true_negative_rate: percentage of correctly classified negative examples
+        :param precision: precision score
+        :param recall: recall score
+        :param f1_score: f1_score
+        :param auroc: area under receiving operator curve
         :param cross_entropy_loss: normalized cross-entropy loss:
         """
         self.positive_examples = positive_examples
         self.negative_examples = negative_examples
 
-        self.positive_accuracy = positive_accuracy
-        self.negative_accuracy = negative_accuracy
-        self.accuracy = accuracy
+        self.total_accuracy = total_accuracy
+
+        self.true_positive_rate = true_positive_rate
+        self.true_negative_rate = true_negative_rate
+        self.false_positive_rate = 1.0 - true_negative_rate
+        self.false_negative_rate = 1.0 - true_positive_rate
+
+        self.precision = precision
+        self.recall = recall 
+        self.f1_score = f1_score
+
+        self.auroc = auroc
 
         self.cross_entropy = cross_entropy
 
     def __str__(self):
+        """String representation of task metrics."""
         s1 = "total_examples: {}".format(self.total_examples)
         s2 = "positive_examples: {}".format(self.positive_examples)
         s3 = "negative_examples: {}".format(self.negative_examples)
-        s4 = "positive_accuracy: {}".format(self.positive_accuracy)
-        s5 = "negative_accuracy: {}".format(self.negative_accuracy)
-        s6 = "total_accuracy: {}".format(self.accuracy)
-        s7 = "cross_entropy: {}".format(self.cross_entropy)
-        return "\n".join([s1, s2, s3, s4, s5, s6, s7])
+        s4 = "total_accuracy: {} ".format(self.total_accuracy)
+
+        s5 = "true_positive_rate: {}".format(self.true_positive_rate)
+        s6 = "true_negative_rate: {}".format(self.true_negative_rate)
+        s7 = "false_positive_rate: {}".format(self.false_positive_rate)
+        s8 = "false_negative_rate: {}".format(self.false_negative_rate)
+
+        s9 = "precision: {}".format(self.precision)
+        s10 = "recall: {}".format(self.recall)
+        s11 = "f1_score: {}".format(self.f1_score)
+
+        s12 = "AUROC: {}".format(self.auroc)
+        s13 = "cross_entropy: {}".format(self.cross_entropy)
+
+        return "\n".join([s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13])
 
     @property 
     def total_examples(self):
