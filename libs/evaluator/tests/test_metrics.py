@@ -25,15 +25,15 @@ class test_metrics(unittest.TestCase):
 
         expected_negative_examples = 1
         expected_positive_examples = 1
-        expected_negative_accuracy = 1.0
-        expected_positive_accuracy = 0.0
-        expected_accuracy = 0.5
+        expected_true_negative_rate = 1.0
+        expected_true_positive_rate = 0.0
+        expected_total_accuracy = 0.5
 
         self.assertEqual(task_metrics.negative_examples, expected_negative_examples)
         self.assertEqual(task_metrics.positive_examples, expected_positive_examples)
-        self.assertEqual(task_metrics.negative_accuracy, expected_negative_accuracy)
-        self.assertEqual(task_metrics.positive_accuracy, expected_positive_accuracy)
-        self.assertEqual(task_metrics.accuracy, expected_accuracy)
+        self.assertEqual(task_metrics.true_negative_rate, expected_true_negative_rate)
+        self.assertEqual(task_metrics.true_positive_rate, expected_true_positive_rate)
+        self.assertEqual(task_metrics.total_accuracy, expected_total_accuracy)
 
 
 
