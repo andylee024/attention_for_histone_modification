@@ -1,9 +1,25 @@
 import tensorflow as tf
 
 from komorebi.libs.trainer.abstract_tensorflow_trainer import AbstractTensorflowTrainer
+from komorebi.libs.utilities.constants import SINGLE_PREDICTION
 
 class AttentionTrainer(AbstractTensorflowTrainer):
     """Trainer implementation for training attention models."""
+
+    def __init__(self, task_index, trainer_config, experiment_directory, checkpoint_directory, summary_directory):
+        """Initialize trainer.
+
+        :param task_index: the task index on which to train model
+        :param config: trainer_config object.
+        :param experiment_directory: directory corresponding to experiment
+        :param checkpont_directory: directory for storing model checkpoints
+        :param summary_directory: directory for storing tf summaries
+        """
+        super(AttentionTrainer, self).__init__(config=trainer_config,
+                                               experiment_directory=experiment_directory,
+                                               checkpoint_directory=checkpoint_directory,
+                                               summary_directory=summary_directory)
+        self.task_index = task_index
 
     def _build_computational_graph(self, model, optimizer):
         """Construct a computational graph for training a model.
@@ -17,8 +33,11 @@ class AttentionTrainer(AbstractTensorflowTrainer):
         graph_inputs = {'features'  : model.inputs['features'],
                         'sequence' : model.inputs['sequence'],
                         'labels'    : model.outputs['labels']}
-    
-        loss_op = _get_loss_op(predictions=model.inference['logit'], labels=graph_inputs['labels'])
+
+        predictions, single_task_labels = _prepare_single_task_data(
+                task_index=self.task_index, predictions=model.inference['logit'], labels=graph_inputs['labels'])
+
+        loss_op = _get_loss_op(predictions=predictions, labels=single_task_labels)
         train_op = _get_train_op(loss_op=loss_op, optimizer=optimizer)
         summary_op = _get_summary_op(loss_op)
 
@@ -40,23 +59,28 @@ class AttentionTrainer(AbstractTensorflowTrainer):
                 graph_inputs['labels']: data['label']}
 
 
+def _prepare_single_task_data(task_index, predictions, labels):
+    """Extract relevant single task labels from the original dataset labels and make data shapes consistent.
+
+    :param task_index: the task index corresponding to single task prediction
+    :param predictions: tensor ouput from model.
+    :param labels: groundtruth labels from original dataset
+    :return: processed predictions, labels
+    """
+    single_task_labels = tf.reshape(labels[:, task_index], [-1, SINGLE_PREDICTION])
+    predictions = tf.reshape(predictions, [-1, SINGLE_PREDICTION])
+    return single_task_labels, predictions
+
+
 def _get_loss_op(predictions, labels):
     """Return loss for model.
 
-    :param predictions: tensor ouput from model.
-    :param labels: groundtruth labels.
+    :param predictions: tensor ouput from model (currently logits)
+    :param labels: groundtruth labels for single task prediction
     :return: loss
     """
     with tf.name_scope('loss'):
         number_of_samples = tf.shape(labels)[0]
-        
-        # HACK
-        task_index = 100
-        labels = tf.reshape(labels[:, task_index], [-1, 1])
-
-        print "labels_shape: {}".format(labels.shape)
-        print "predictions_shape: {}".format(predictions.shape)
-
         total_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions, labels=labels))
         return total_loss / tf.cast(number_of_samples, tf.float32)
 

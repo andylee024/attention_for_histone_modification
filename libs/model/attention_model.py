@@ -3,8 +3,8 @@ import numpy as np
 
 from komorebi.libs.model.abstract_model import abstract_tensorflow_model
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
-from komorebi.libs.model.attention_constants import SINGLE_PREDICTION, TOTAL_DEEPSEA_TASKS
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
+from komorebi.libs.utilities.constants import SINGLE_PREDICTION, TOTAL_DEEPSEA_TASKS
 from komorebi.libs.utilities.tf_utils import load_checkpoint_into_session, load_inference_graph_into_session
 
 
