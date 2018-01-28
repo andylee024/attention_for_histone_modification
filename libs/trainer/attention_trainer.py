@@ -49,6 +49,14 @@ def _get_loss_op(predictions, labels):
     """
     with tf.name_scope('loss'):
         number_of_samples = tf.shape(labels)[0]
+        
+        # HACK
+        task_index = 100
+        labels = tf.reshape(labels[:, task_index], [-1, 1])
+
+        print "labels_shape: {}".format(labels.shape)
+        print "predictions_shape: {}".format(predictions.shape)
+
         total_loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions, labels=labels))
         return total_loss / tf.cast(number_of_samples, tf.float32)
 
