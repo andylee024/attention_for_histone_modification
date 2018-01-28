@@ -4,6 +4,7 @@ import numpy as np
 from komorebi.libs.model.abstract_model import abstract_tensorflow_model
 from komorebi.libs.model.attention_configuration import AttentionConfiguration
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
+from komorebi.libs.utilities.constants import SINGLE_PREDICTION, TOTAL_DEEPSEA_TASKS
 from komorebi.libs.utilities.tf_utils import load_checkpoint_into_session, load_inference_graph_into_session
 
 
@@ -60,11 +61,13 @@ class AttentionModel(abstract_tensorflow_model):
         """Return tf.placeholders for holding labels for training model.
 
         :return:
+            Assume that dataset entries follow deepsea format (919 prediction classes).
             Dictionary with following attributes.
-                "labels" : placeholder of shape (batch_size, prediction_classes)
+                "labels" : placeholder of shape (batch_size, TOTAL_DEEPSEA_TASKS=919)
+
         """
         if self._model_outputs is None:
-            labels_shape = (None, self._model_config.prediction_classes)
+            labels_shape = (None, TOTAL_DEEPSEA_TASKS)
             self._model_outputs = {'labels' : tf.placeholder(dtype=tf.float32, shape=labels_shape, name="labels")}
         return self._model_outputs
 
@@ -442,8 +445,8 @@ def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=Fal
         Logits for attention model.
     """
     # specify dimensions of weights and biases
-    hidden_weight_shape = (model_config.hidden_state_dimension, model_config.prediction_classes)
-    context_weight_shape = (model_config.annotation_size, model_config.prediction_classes)
+    hidden_weight_shape = (model_config.hidden_state_dimension, SINGLE_PREDICTION)
+    context_weight_shape = (model_config.annotation_size, SINGLE_PREDICTION)
 
     with tf.variable_scope('decode_lstm', reuse=reuse):
         w_hidden = tf.get_variable(name='w_hidden',
@@ -455,7 +458,7 @@ def decode_lstm(hidden_state, context, model_config, parameter_policy, reuse=Fal
                                     initializer=parameter_policy.weight_initializer)
 
         bias_out = tf.get_variable('bias_out',
-                                   shape=model_config.prediction_classes,
+                                   shape=SINGLE_PREDICTION,
                                    initializer=parameter_policy.constant_initializer)
 
         hidden_contribution = tf.matmul(hidden_state, w_hidden)

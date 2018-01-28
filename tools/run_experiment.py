@@ -34,7 +34,8 @@ ExperimentConfiguration = collections.namedtuple(typename='ExperimentConfigurati
                                                               'model_config', 
                                                               'trainer_config', 
                                                               'optimizer_config', 
-                                                              'parameter_initialization'])
+                                                              'parameter_initialization',
+                                                              'task_index'])
 
 def main(args):
     """Launch machine learning tensorflow experiment."""
@@ -93,7 +94,8 @@ def _parse_experiment_config_json(experiment_config_json):
                 dataset_config=create_dataset_configuration(experiment_info['dataset_config'], logger),
                 model_config=create_model_configuration(experiment_info['model_config'], logger),
                 trainer_config=create_trainer_configuration(experiment_info['trainer_config'], logger),
-                optimizer_config=create_optimizer_configuration(experiment_info['trainer_config'], logger))
+                optimizer_config=create_optimizer_configuration(experiment_info['trainer_config'], logger),
+                task_index=experiment_info['task_index'])
 
 
 def _handle_overwrite(experiment_directory, overwrite_flag=False):
@@ -191,7 +193,8 @@ def _load_trainer(experiment_config):
     :return: trainer satisfying AbstractTensorflowTrainer interface
     """
     logger.info("\t Loading trainer ...")
-    return AttentionTrainer(config=experiment_config.trainer_config,
+    return AttentionTrainer(task_index=experiment_config.task_index,
+                            trainer_config=experiment_config.trainer_config,
                             experiment_directory=experiment_config.experiment_directory,
                             checkpoint_directory=experiment_config.checkpoint_directory,
                             summary_directory=experiment_config.summary_directory)
