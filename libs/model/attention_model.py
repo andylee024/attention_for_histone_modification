@@ -26,7 +26,7 @@ class AttentionModel(abstract_tensorflow_model):
         """Perform inference for attention model.
 
         :return: dictionary of inference ops 
-            "context"           : context probabilities for annotations
+            "context_probabilities"           : context probabilities for annotations
             "logit"             : unnormalized logits 
             "prediction"        : prediction probabilities for each class
             "classification"    : binary classification based on prediction probabilities 
@@ -79,7 +79,8 @@ class AttentionModel(abstract_tensorflow_model):
         """
         tensor_info_features = tf.saved_model.utils.build_tensor_info(self.inputs['features'])
         tensor_info_sequence = tf.saved_model.utils.build_tensor_info(self.inputs['sequence'])
-        tensor_info_context = tf.saved_model.utils.build_tensor_info(self.inference['context'])
+        tensor_info_context_probabilities = tf.saved_model.utils.build_tensor_info(
+                self.inference['context_probabilities'])
         tensor_info_prediction = tf.saved_model.utils.build_tensor_info(self.inference['prediction'])
         tensor_info_classification = tf.saved_model.utils.build_tensor_info(self.inference['classification'])
 
@@ -88,7 +89,7 @@ class AttentionModel(abstract_tensorflow_model):
                     'features': tensor_info_features, 
                     'sequence': tensor_info_sequence},
                 outputs={
-                    'context': tensor_info_context,
+                    'context_probabilities': tensor_info_context_probabilities,
                     'prediction': tensor_info_prediction, 
                     'classification': tensor_info_classification},
                 method_name="attention_prediction_signature")
@@ -96,7 +97,7 @@ class AttentionModel(abstract_tensorflow_model):
         print "prediction signature op names"
         print "features: {}".format(self.inputs['features'])
         print "sequence: {}".format(self.inputs['sequence'])
-        print "context: {}".format(self.inference['context'])
+        print "context_probabilities: {}".format(self.inference['context_probabilities'])
         print "prediction: {}".format(self.inference['prediction'])
         print "classification: {}".format(self.inference['classification'])
         
@@ -158,7 +159,7 @@ class AttentionModel(abstract_tensorflow_model):
         prediction = tf.sigmoid(logit, name="prediction")
         classification = tf.round(prediction, name="classification")
 
-        self._model_inference = {"context": context,
+        self._model_inference = {"context_probabilities": context_probabilities,
                                  "logit": logit, 
                                  "prediction": prediction, 
                                  "classification": classification}
@@ -188,7 +189,7 @@ class AttentionModel(abstract_tensorflow_model):
                 "features": loaded_graph.get_tensor_by_name("model_inputs/features:0")}
 
         self._model_inference = {
-                "context": loaded_graph.get_tensor_by_name("context:0"), 
+                "context_probabilities": loaded_graph.get_tensor_by_name("attention_layer/Softmax:0"),
                 "prediction": loaded_graph.get_tensor_by_name("prediction:0"), 
                 "classification": loaded_graph.get_tensor_by_name("classification:0")}
 

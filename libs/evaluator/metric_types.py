@@ -1,18 +1,33 @@
 """Types for computing and storing metrics."""
 
+class attention_interpretation(object):
+    """Attention interpretation information for a single training example."""
+
+    def __init__(self, sequence, context_probabilities):
+        """Initialize structure.
+
+        :param sequence: genetic sequence
+        :param context_probabilities: context probabilities output by attention network for sequence
+        """
+        self.sequence = sequence
+        self.context_probabilities = context_probabilities
+
+
 class validation_point(object):
     """Validation point of single example for single task problem."""
 
-    def __init__(self, classification, probability_prediction, label):
+    def __init__(self, classification, probability_prediction, label, attention_interpretation_info):
         """Initialize structure.
 
         :param classification: binary classification 
         :param probability_prediction: probability associated with classification
         :param label: ground-truth label
+        :param attention_interpretation_info: information to intrepret attention network
         """
         self.classification = classification
         self.probability_prediction = probability_prediction
         self.label = label
+        self.attention_interpretation = attention_interpretation_info
 
 
 class multitask_validation_point(object):
