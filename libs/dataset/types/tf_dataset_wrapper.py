@@ -50,6 +50,7 @@ class tf_dataset_wrapper(object):
         """Return number of training examples associated with dataset."""
         return len(self._training_examples)
 
+
     @property
     def iterator(self):
         """Return iterator object associated with dataset."""
