@@ -1,5 +1,5 @@
 """Utilities for trainer."""
-
+import collections
 import numpy as np
 from tqdm import tqdm
 
@@ -10,19 +10,20 @@ dataset_statistics = collections.namedtuple(typename="dataset_statistics",
                                            field_names=['positive_samples', 'negative_samples'])
 
 
-def infer_positive_upweight_parameter(tf_dataset, task_id, sess):
+def infer_positive_upweight_parameter(dataset, task_index, sess):
     """Infer positive upweight parameter for imbalanced datasets.
 
     In classification settings, the imbalanced dataset issue often arises. In these cases, we would like to weight
     the losses for positive and negative samples accordingly to balance the dataset.
 
-    :param tf_dataset: dataset object
-    :param task_id: task for which to compute statistics.
+    :param dataset: tf_dataset object
+    :param task_index: task for which to compute statistics.
     :param sess: tensorflow session 
     :return: float. upweight parameter for positive samples
     """
-    dataset_stats = _get_dataset_statistics_for_task(tf_dataset, task_id, sess)
-    return negative_samples / positive_samples
+    dataset_stats = _get_dataset_statistics_for_task(dataset, task_index, sess)
+    positive_upweight = dataset_stats.negative_samples / dataset_stats.positive_samples
+    return positive_upweight
     
 
 def get_data_stream_for_epoch(dataset, sess):
@@ -58,21 +59,21 @@ def compute_number_of_batches(dataset, batch_size):
     return total_batches
 
 
-def _get_dataset_statistics_for_task(tf_dataset, task_id, sess):
+def _get_dataset_statistics_for_task(dataset, task_index, sess):
     """Get statistics for a particular task for a multitask dataset.
 
-    :param tf_dataset: dataset object
-    :param task_id: task for which to compute statistics.
+    :param dataset: tf_dataset object
+    :param task_index: task for which to compute statistics.
     :param sess: tensorflow session
     :return: 2-tuple (number of positive samples, number of negative samples)
     """
-    tf_dataset.build_input_pipeline_iterator(batch_size=1, buffer_size=1000, parallel_calls=6)
-    total_examples = tf_dataset.number_of_examples
-    data_stream_op = get_data_stream_for_epoch(tf_dataset, sess)
+    dataset.build_input_pipeline_iterator(batch_size=1, buffer_size=1000, parallel_calls=6)
+    total_examples = dataset.number_of_examples
+    data_stream_op = get_data_stream_for_epoch(dataset, sess)
 
-    training_examples = (sess.run(data_stream_op) for _ in xrange(tf_dataset.number_of_examples))
+    training_examples = (sess.run(data_stream_op) for _ in xrange(dataset.number_of_examples))
     multitask_labels = (np.ravel(te['label']) for te in training_examples)
-    single_task_labels = [mt_label[task_id] for mt_label in tqdm(multitask_labels, 
+    single_task_labels = [mt_label[task_index] for mt_label in tqdm(multitask_labels, 
                                                                  desc="computing dataset statistics", 
                                                                  total=total_examples)]
     
