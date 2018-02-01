@@ -98,10 +98,13 @@ def _compute_accuracy(inference_set):
 
 def _compute_cross_entropy(inference_set):
     """Compute cross entropy loss of inference set.
+
+    Note the [0] indexing only works for single task prediction. 
+    For multitask prediction, remove this indexing.
     
     :param inference_set: set of validation points to evaluate
     :return: cross-entropy loss
     """
-    probabilities, labels = zip(*[(vp.probability_prediction, vp.label) for vp in inference_set.validation_points])
+    probabilities, labels = zip(*[(vp.probability_prediction[0], vp.label[0]) for vp in inference_set.validation_points])
     return sklearn.metrics.log_loss(y_true=labels, y_pred=probabilities)
 

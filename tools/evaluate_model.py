@@ -18,7 +18,7 @@ def main(args):
         evaluator = _load_evaluator() 
 
         sess.run(init_op)
-        task_metrics = evaluator.score_model(model, dataset, sess)
+        task_metrics = evaluator.score_single_task_model(args.task_index, model, dataset, sess)
 
         print task_metrics
 
@@ -35,14 +35,16 @@ def _setup_device_environment(args):
 def _load_model(args, sess):
     """Return trained model associated with trained model directory.
     
-    :param trained_model_directory: directory containing trained model .pb file
+    :param args: Namsspace object with the following attributes
+        args.trained_model_directory: directory containing trained model .pb file
+        args.checkpoint_model: directory containing checkpoint file
     :param sess: tensorflow session
     :return: model object satisfying abstract model interface
     """
     model = AttentionModel()
 
-    if args.trained_model:
-        model.load_trained_model(trained_model_directory, sess)
+    if args.trained_model_directory:
+        model.load_trained_model(args.trained_model_directory, sess)
     elif args.checkpoint_model:
         model.load_checkpoint_model(args.checkpoint_model, sess)
     else:
@@ -71,10 +73,11 @@ def _load_evaluator():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command line tool for evaluating trained tensorflow models.")
 
+    parser.add_argument("-task", "--task-index", type=int, required=True, help="Task index for which to evaluate model on.")
     parser.add_argument("-d", "--dataset", type=str, required=True, help="Configuration json for dataset.")
 
     model_parser = parser.add_mutually_exclusive_group()
-    model_parser.add_argument("-pb", "--trained-model", type=str, help="Directory containing trained .pb model file.")
+    model_parser.add_argument("-pb", "--trained-model-directory", type=str, help="Directory containing trained .pb model file.")
     model_parser.add_argument("-ck", "--checkpoint-model", type=str, help="Path to model checkpoint.")
 
     mode = parser.add_mutually_exclusive_group()
