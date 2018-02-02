@@ -1,0 +1,10 @@
+{
+    "description": "Configuration file for machine learning experiment.", 
+    "experiment_name": "attention_experiment_test",
+    "experiments_directory": "/tmp", 
+    "dataset_config": "/Users/andy/Projects/komorebi/config/dataset_config/validation_dataset_config.json",
+    "model_config": "/Users/andy/Projects/komorebi/config/model_config/attention_model_config.json",
+    "trainer_config": "/Users/andy/Projects/komorebi/config/trainer_config/attention_trainer_config.json",
+    "task_index": 127
+}
+

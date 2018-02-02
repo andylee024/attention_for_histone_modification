@@ -57,10 +57,11 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         :param optimizer: tf optimizer object
         """
         # setup compute graph
+        graph_inputs, ops = self._build_computational_graph(dataset=dataset, model=model, optimizer=optimizer)
+
         dataset.build_input_pipeline_iterator(batch_size=self.batch_size,
                                               buffer_size=self.buffer_size,
                                               parallel_calls=self.parallel_calls)
-        graph_inputs, ops = self._build_computational_graph(model, optimizer)
         
         # initialize variables and objects
         saver = tf.train.Saver()
@@ -88,6 +89,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
             _save_trained_model(prediction_signature=model.prediction_signature, 
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
+
 
     @abc.abstractmethod
     def _build_computational_graph(self, model, optimizer):

@@ -105,5 +105,5 @@ venv.bak/
 
 # additional ignores
 *.idea
-*.ipynb
 *.hdf5
+*.swp

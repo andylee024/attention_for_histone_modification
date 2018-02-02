@@ -5,15 +5,14 @@ import logging
 import os
 import sys
 
-from komorebi.libs.model.attention_configuration import AttentionConfiguration
 from komorebi.libs.model.attention_model import AttentionModel 
-from komorebi.libs.dataset.types.dataset_config import DatasetConfiguration
 from komorebi.libs.dataset.types.tf_dataset_wrapper import tf_dataset_wrapper 
 from komorebi.libs.model.parameter_initialization import ParameterInitializationPolicy
-from komorebi.libs.optimizer.optimizer_config import OptimizerConfiguration
 from komorebi.libs.optimizer.optimizer_factory import create_tf_optimizer 
 from komorebi.libs.trainer.attention_trainer import AttentionTrainer
-from komorebi.libs.trainer.trainer_config import TrainerConfiguration
+from komorebi.libs.utilities.create_config import (
+        create_dataset_configuration, create_model_configuration, 
+        create_optimizer_configuration, create_trainer_configuration)
 from komorebi.libs.utilities.io_utils import copy_data, ensure_directory, load_pickle_object, remove_directory
 
 # Tensorflow specific directories
@@ -35,7 +34,8 @@ ExperimentConfiguration = collections.namedtuple(typename='ExperimentConfigurati
                                                               'model_config', 
                                                               'trainer_config', 
                                                               'optimizer_config', 
-                                                              'parameter_initialization'])
+                                                              'parameter_initialization',
+                                                              'task_index'])
 
 def main(args):
     """Launch machine learning tensorflow experiment."""
@@ -85,15 +85,17 @@ def _parse_experiment_config_json(experiment_config_json):
         config_directory = os.path.join(experiment_directory, CONFIG_DIRECTORY_NAME)
         summary_directory = os.path.join(experiment_directory, SUMMARY_DIRECTORY_NAME)
         
-        return ExperimentConfiguration(experiment_directory=experiment_directory,
-                                       checkpoint_directory=checkpoint_directory,
-                                       config_directory=config_directory,
-                                       summary_directory=summary_directory,
-                                       parameter_initialization=ParameterInitializationPolicy(),
-                                       dataset_config=_create_dataset_configuration(experiment_info['dataset_config']),
-                                       model_config=_create_model_configuration(experiment_info['model_config']),
-                                       trainer_config=_create_trainer_configuration(experiment_info['trainer_config']),
-                                       optimizer_config=_create_optimizer_configuration(experiment_info['trainer_config']))
+        return ExperimentConfiguration(
+                experiment_directory=experiment_directory,
+                checkpoint_directory=checkpoint_directory,
+                config_directory=config_directory,
+                summary_directory=summary_directory,
+                parameter_initialization=ParameterInitializationPolicy(),
+                dataset_config=create_dataset_configuration(experiment_info['dataset_config'], logger),
+                model_config=create_model_configuration(experiment_info['model_config'], logger),
+                trainer_config=create_trainer_configuration(experiment_info['trainer_config'], logger),
+                optimizer_config=create_optimizer_configuration(experiment_info['trainer_config'], logger),
+                task_index=experiment_info['task_index'])
 
 
 def _handle_overwrite(experiment_directory, overwrite_flag=False):
@@ -146,76 +148,6 @@ def _handle_config_copy(experiment_config_json, experiment_config_directory):
         copy_data(source=experiment_info['trainer_config'], destination=experiment_config_directory)
 
 
-# ----------------------------------------------------------------
-# Helpers for creating configurations
-# ----------------------------------------------------------------
-def _create_dataset_configuration(dataset_config_json):
-    """Create dataset configuration given dataset json.
-    
-    :param dataset_config_json: json file specifying dataset configurations
-    :return: dataset configuration object
-    """
-    logger.info("\t Creating dataset configuration...")
-
-    with open(dataset_config_json, 'r') as f:
-        datastore = json.load(f)
-        return DatasetConfiguration(dataset_name=datastore['dataset_name'], 
-                                    examples_directory=datastore['examples_directory'])
-
-
-def _create_model_configuration(model_config_json):
-    """Create model configuration given model json.
-    
-    :param model_json: json file specifying model configuration
-    :return: model configuration object
-    """
-    logger.info("\t Creating model configuration...")
-
-    with open(model_config_json, 'r') as f:
-        datastore = json.load(f)
-        if datastore['model_type'] == "attention":
-            return AttentionConfiguration(sequence_length=datastore['sequence_length'],
-                                          vocabulary_size=datastore['vocabulary_size'],
-                                          prediction_classes=datastore['prediction_classes'],
-                                          number_of_annotations=datastore['number_of_annotations'],
-                                          annotation_size=datastore['annotation_size'],
-                                          hidden_state_dimension=datastore['hidden_state_dimension'])
-        else:
-            raise NotImplementedError("model_type = {} not recognized!".format(datastore['model_type']))
-
-
-def _create_optimizer_configuration(trainer_config_json):
-    """Create optimizer configuration.
-
-    Note, that the optimizer config settings are contained within the trainer config. 
-    
-    :param trainer_config_json: json file specifying trainer configurations
-    :return: optimizer config
-    """
-    logger.info("\t Creating optimizer configuration...")
-
-    with open(trainer_config_json, 'r') as f:
-        datastore = json.load(f)
-        return OptimizerConfiguration(optimizer_type=datastore['optimizer']['type'], 
-                                      learning_rate=datastore['optimizer']['learning_rate'])
-
-
-def _create_trainer_configuration(trainer_config_json):
-    """Create trainer configuration from json.
-
-    :param trainer_config_json: json file specifying trainer configuration.
-    :param experiment_directory: directory storing experiment results
-    :return: trainer configuration object.
-    """
-    logger.info("\t Creating trainer configuration...")
-
-    with open(trainer_config_json, 'r') as f:
-        datastore = json.load(f)
-        return TrainerConfiguration(epochs=datastore['epochs'],
-                                    batch_size=datastore['batch_size'],
-                                    buffer_size=datastore['buffer_size'],
-                                    parallel_calls=datastore['parallel_calls'],
-                                    checkpoint_frequency=datastore['checkpoint_frequency'])
 
 # ----------------------------------------------------------------
 # Helpers for loading objects 
@@ -261,7 +193,8 @@ def _load_trainer(experiment_config):
     :return: trainer satisfying AbstractTensorflowTrainer interface
     """
     logger.info("\t Loading trainer ...")
-    return AttentionTrainer(config=experiment_config.trainer_config,
+    return AttentionTrainer(task_index=experiment_config.task_index,
+                            trainer_config=experiment_config.trainer_config,
                             experiment_directory=experiment_config.experiment_directory,
                             checkpoint_directory=experiment_config.checkpoint_directory,
                             summary_directory=experiment_config.summary_directory)

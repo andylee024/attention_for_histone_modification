@@ -1,30 +1,12 @@
 import abc
 
-class AbstractModel(object):
-    """Abstract base class for machine learning models."""
-    __metaclass__ = abc.ABCMeta
-    
-    @abc.abstractmethod
-    def predict(self, *args):
-        """Compute model prediction.
-
-        :param *args : input data X specific to model.
-        :return y : predictions based on input data.
-        """
-        pass
-
-
-class AbstractTensorflowModel(AbstractModel):
+class abstract_tensorflow_model(object):
     """Abstract base class specific to tensorflow models."""
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
-    def predict(self, *args):
-        """Compute model prediction.
-
-        :param *args : input data X specific to model.
-        :return y : predictions based on input data.
-        """
+    @abc.abstractproperty
+    def inference(self):
+        """Return inference ops."""
         pass
 
     @abc.abstractproperty
@@ -45,4 +27,18 @@ class AbstractTensorflowModel(AbstractModel):
     @abc.abstractproperty
     def prediction_signature(self):
         """Return prediction signature of model."""
+        pass
+
+    @abc.abstractmethod
+    def _build_inference_graph(self, *args):
+        """Build inference graph associated with model architecture."""
+        pass
+
+    @abc.abstractmethod
+    def load_trained_model(self, trained_model_directory, sess):
+        """Populate model ops based on trained model directory.
+
+        :param trained_model_directory: directory containing tensorflow .pb trained model
+        :param sess: tensorflow session
+        """
         pass
