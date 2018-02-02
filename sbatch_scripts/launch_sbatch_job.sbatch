@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu 
-#SBATCH --gres=gpu:1
-#SBATCH --mem=64G
+#SBATCH --gres=gpu:0
+#SBATCH --mem=10G
 #SBATCH --job-name attn_exp
 #SBATCH -e /home/andyl2/job_logs/job.%j.err
 #SBATCH -o /home/andyl2/job_logs/job.%j.out
@@ -23,14 +23,14 @@ export LC_ALL=C
 
 # variables
 SINGULARITY_CONTAINER="/containers/images/ubuntu-16.04-lts-tensorflow-1.3.0_cudnn-8.0-v6.img"
-TF_EXPERIMENT_SCRIPT="/home/andyl2/Scripts/run_tf_experiment.sh"
+TF_EXPERIMENT_SCRIPT="/home/andyl2/Projects/komorebi/sbatch_scripts/run_tf_experiment.sh"
 
 # User (specify script to run here)
 EXECUTABLE=${TF_EXPERIMENT_SCRIPT}
 
-# old method
+# launch experiment 
 singularity exec ${SINGULARITY_CONTAINER} /bin/bash ${EXECUTABLE}
 
-# launch experiment
+# launch experiment (old)
 # bash ${EXECUTABLE}
 

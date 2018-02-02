@@ -4,6 +4,6 @@
     "experiments_directory": "/projects/pfenninggroup/machineLearningForComputationalBiology/andyl2/attention_histone_modification/experiments", 
     "dataset_config": "/home/andyl2/Projects/komorebi/config/dataset_config/validation_dataset_config.json",
     "model_config": "/home/andyl2/Projects/komorebi/config/model_config/attention_model_config.json",
-    "trainer_config": "/home/andyl2/Projects/komorebi/config/trainer_config/attention_trainer_config.json"
+    "trainer_config": "/home/andyl2/Projects/komorebi/config/trainer_config/attention_trainer_config_test.json",
+    "task_index": 127
 }
-
