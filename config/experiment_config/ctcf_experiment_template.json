@@ -1,0 +1,9 @@
+{
+    "description": "An experiment configuration template for running CTCF single task prediction.", 
+    "experiment_name": "attention_ctcf_task_experiment_1",
+    "experiments_directory": "/home/andylee1/Projects/attention_histone_modification_experiments", 
+    "dataset_config": "/home/andylee1/Projects/komorebi/config/dataset_config/validation_dataset_config.json",
+    "model_config": "/home/andylee1/Projects/komorebi/config/model_config/attention_model_config.json",
+    "trainer_config": "/home/andylee1/Projects/komorebi/config/trainer_config/attention_trainer_config.json",
+    "task_index": 3
+}
