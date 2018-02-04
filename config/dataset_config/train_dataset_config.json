@@ -1,0 +1,11 @@
+{
+    "description": "A configuration file specifying options for generating attention dataset.", 
+    "dataset_name": "attention_train_dataset",
+    "sequence_data": "/home/andylee/Projects/attention_histone_modification/data/deepsea_train_x.npy",
+    "label_data": "/home/andylee/Projects/attention_histone_modification/data/deepsea_train_y.npy",
+    "model_name": "DANQ",
+    "model_weights": "/home/andylee/Projects/attention_histone_modification/data/danq_weights.hdf5",
+    "model_layer": "max_pooling1d_1",
+    "dataset_path": "/home/andylee/Projects/attention_histone_modification/datasets/attention_train_dataset/sharded_attention_dataset.pkl",
+    "examples_directory": "/home/andylee/Projects/attention_histone_modification/datasets/attention_train_tf_dataset"
+}
