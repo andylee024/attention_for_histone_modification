@@ -14,13 +14,14 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config, experiment_directory, checkpoint_directory, summary_directory):
+    def __init__(self, config, experiment_directory, checkpoint_directory, summary_directory, logger):
         """Initialize trainer.
         
         :param config: trainer_config object.
         :param experiment_directory: directory corresponding to experiment
         :param checkpont_directory: directory for storing model checkpoints
         :param summary_directory: directory for storing tf summaries
+        :param logger: logger object
         """
         assert isinstance(config, TrainerConfiguration)
         assert os.path.isdir(experiment_directory)
@@ -30,6 +31,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         self._experiment_directory = experiment_directory
         self._checkpoint_directory = checkpoint_directory
         self._summary_directory = summary_directory
+
+        self.logger = logger
 
         self.epochs = config.epochs
         self.batch_size = config.batch_size
@@ -79,7 +82,8 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                              ops=ops, 
                              convert_training_examples=self._convert_training_examples,
                              writer=writer,
-                             sess=sess)
+                             sess=sess, 
+                             logger=self.logger)
 
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
@@ -89,7 +93,6 @@ class AbstractTensorflowTrainer(AbstractTrainer):
             _save_trained_model(prediction_signature=model.prediction_signature, 
                                 experiment_directory=self._experiment_directory, 
                                 sess=sess)
-
 
     @abc.abstractmethod
     def _build_computational_graph(self, model, optimizer):
@@ -119,7 +122,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
         pass
 
 
-def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess):
+def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_examples, writer, sess, logger):
     """Execute training for one epoch.
     
     :param dataset: dataset to train on
@@ -129,6 +132,7 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
     :param convert_training_examples: function to convert training examples to feed dict
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
+    :param logger: logger object
     """
     total_iterations = compute_number_of_batches(dataset, batch_size)
     data_stream_op = get_data_stream_for_epoch(dataset, sess)
@@ -139,10 +143,11 @@ def _train_epoch(dataset, batch_size, graph_inputs, ops, convert_training_exampl
                          ops=ops, 
                          convert_training_examples=convert_training_examples, 
                          writer=writer, 
-                         sess=sess)
+                         sess=sess,
+                         logger=logger)
 
 
-def _train_iteration(data_stream_op, graph_inputs, ops, convert_training_examples, writer, sess):
+def _train_iteration(data_stream_op, graph_inputs, ops, convert_training_examples, writer, sess, logger):
     """Train a single iteration of model.
     
     :param data_stream_op: tensorflow op to retrieve next batch data
@@ -151,12 +156,14 @@ def _train_iteration(data_stream_op, graph_inputs, ops, convert_training_example
     :param convert_training_examples: function to convert training examples to feed dict
     :param writer: tensorflow file writer for writing summaries
     :param sess: tensorflow session
+    :param logger: logger object
     """
     try:
         data = sess.run(data_stream_op)
-        _, loss, summary = sess.run(fetches=[ops['train_op'], ops['loss_op'], ops['summary_op']], 
-                                    feed_dict=convert_training_examples(data=data, graph_inputs=graph_inputs))
-        writer.add_summary(summary)
+        _, loss = sess.run(fetches=[ops['train_op'], ops['loss_op']],
+                           feed_dict=convert_training_examples(data=data, graph_inputs=graph_inputs))
+
+        logger.info("\t iteration loss: {}".format(loss))
 
     except tf.errors.OutOfRangeError:
         return
@@ -174,6 +181,5 @@ def _save_trained_model(prediction_signature, experiment_directory, sess):
     builder.add_meta_graph_and_variables(sess=sess, 
                                          tags=[tf.saved_model.tag_constants.SERVING],
                                          signature_def_map={"predict": prediction_signature})
-    model_path = builder.save()
-    print "saved {}".format(model_path)
+    builder.save()
 

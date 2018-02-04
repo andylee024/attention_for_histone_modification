@@ -50,7 +50,7 @@ def main(args):
     dataset = _load_dataset(experiment_config.dataset_config)
     model = _load_model(experiment_config.model_config, experiment_config.parameter_initialization)
     optimizer = _load_optimizer(experiment_config.optimizer_config)
-    trainer = _load_trainer(experiment_config)
+    trainer = _load_trainer(experiment_config, logger)
 
     # train model
     trainer.train_model(dataset=dataset, model=model, optimizer=optimizer)
@@ -184,7 +184,7 @@ def _load_optimizer(optimizer_config):
     return create_tf_optimizer(optimizer_config)
 
 
-def _load_trainer(experiment_config):
+def _load_trainer(experiment_config, logger):
     """Load trainer from config.
     
     The entire experiment_config is needed to expose relevant directory information.
@@ -197,7 +197,8 @@ def _load_trainer(experiment_config):
                             trainer_config=experiment_config.trainer_config,
                             experiment_directory=experiment_config.experiment_directory,
                             checkpoint_directory=experiment_config.checkpoint_directory,
-                            summary_directory=experiment_config.summary_directory)
+                            summary_directory=experiment_config.summary_directory,
+                            logger=logger)
     
 
 # ----------------------------------------------------------------
