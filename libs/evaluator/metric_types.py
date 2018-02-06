@@ -1,5 +1,7 @@
 """Types for computing and storing metrics."""
 
+import numpy as np
+
 class attention_interpretation(object):
     """Attention interpretation information for a single training example."""
 
@@ -11,6 +13,26 @@ class attention_interpretation(object):
         """
         self.sequence = sequence
         self.context_probabilities = context_probabilities
+        self._index_to_nucleotide = {0: 'a', 1: 'c', 2: 'g', 3: 't'}
+
+    def _convert_sequence_to_string(self, sequence):
+        """Connvert sequence to string representation."""
+        return "".join([self._index_to_nucleotide[s] for s in sequence])
+
+    @property
+    def influence_motif(self):
+        """Return influence motif and associated context probability score.
+        
+        :return: 2-tuple (influence_motif, influence score)
+        """
+        max_index = np.argmax(self.context_probabilities)
+        sequence_start = max(0, max_index - 6)
+        sequence_end = min(len(self.sequence), max_index + 7)
+
+        influence_score = self.context_probabilities[max_index]
+        influence_motif = self.sequence[sequence_start:sequence_end]
+        influence_motif_string = self._convert_sequence_to_string(influence_motif)
+        return influence_motif_string, influence_score
 
 
 class validation_point(object):
