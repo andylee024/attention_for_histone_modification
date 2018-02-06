@@ -87,7 +87,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
-                    saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
+                    saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch, max_to_keep=50)
 
             # save trained model
             _save_trained_model(prediction_signature=model.prediction_signature, 
