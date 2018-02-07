@@ -4,7 +4,7 @@ import tensorflow as tf
 from tqdm import trange
 
 from komorebi.libs.evaluator.inference_set import multitask_inference_set, single_task_inference_set
-from komorebi.libs.evaluator.metric_types import attention_interpretation, multitask_validation_point, validation_point
+from komorebi.libs.evaluator.metric_types import attention_result, multitask_validation_point, validation_point
 from komorebi.libs.evaluator.metrics import compute_task_metrics
 from komorebi.libs.trainer.trainer_utils import get_data_stream_for_epoch
 from komorebi.libs.utilities.constants import TOTAL_DEEPSEA_TASKS
@@ -48,26 +48,13 @@ class Evaluator(object):
             singletask_vp = _convert_example_to_single_task_validation_point(
                     task_id=task_id, model=model, training_example=sess.run(data_stream_op), sess=sess)
             self._inference_set.add_validation_point(singletask_vp)
-            
-            print "sequence: {}".format(_convert_to_letters(singletask_vp.attention_interpretation.sequence))
-            print "classification: {}".format(singletask_vp.classification)
-            print "probability_prediction: {}".format(singletask_vp.probability_prediction)
-            print "context_probabilities: {}".format(singletask_vp.attention_interpretation.context_probabilities)
-            
-            context_probabilities = singletask_vp.attention_interpretation.context_probabilities
-            max_index = np.argmax(context_probabilities)
 
-            start_idx = max(0, max_index - 6)
-            end_idx = min(len(singletask_vp.attention_interpretation.sequence), max_index + 7)
-            print "influence_motif: {}".format(_convert_to_letters(singletask_vp.attention_interpretation.sequence[start_idx:end_idx]))
-
+            motif, score = singletask_vp.attention_result.impact_motif_and_score
+            label = singletask_vp.label
+            print "impact_motif: {}, impact_score: {} | label : {}".format(motif, score, label)
 
         return compute_task_metrics(self._inference_set)
 
-# DEMO
-def _convert_to_letters(sequence):
-    d = {0: 'a', 1: 'c', 2: 'g', 3: 't'}
-    return "".join([d[s] for s in sequence])
 
 def _build_evaluation_datastream(dataset, sess):
     """Build dataset iterator for evaluation of model.
@@ -103,7 +90,7 @@ def _convert_example_to_single_task_validation_point(task_id, model, training_ex
     return validation_point(classification=np.ravel(classification),
                             probability_prediction=np.ravel(probability),
                             label=np.ravel(single_task_label),
-                            attention_interpretation_info=attention_interpretation(
+                            attention_result_instance=attention_result(
                                 sequence=np.ravel(training_example['sequence']),
                                 context_probabilities=np.ravel(context_probabilities)))
 
