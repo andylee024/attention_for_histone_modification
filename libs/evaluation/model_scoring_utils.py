@@ -1,59 +1,50 @@
 import numpy as np
-import sklearn.metrics
 import tensorflow as tf
 from tqdm import trange
 
-from komorebi.libs.evaluator.inference_set import multitask_inference_set, single_task_inference_set
-from komorebi.libs.evaluator.metric_types import attention_result, multitask_validation_point, validation_point
-from komorebi.libs.evaluator.metrics import compute_task_metrics
+from komorebi.libs.evaluation.inference_set import multitask_inference_set, single_task_inference_set
+from komorebi.libs.evaluation.metric_types import attention_result, multitask_validation_point, validation_point
 from komorebi.libs.trainer.trainer_utils import get_data_stream_for_epoch
 from komorebi.libs.utilities.constants import TOTAL_DEEPSEA_TASKS
 
 
-class Evaluator(object):
-    """Class for evaluating tensorflow models on a dataset."""
+def generate_single_task_inference_set(task_id, model, dataset, sess):
+    """Generate a single task inference set for evaluation and interpretation.
     
-    def __init__(self):
-        self._inference_set = None
+    :param task_id: task_id that identifies predictive task
+    :param model: trained tensorflow model satisfying abstract model interface
+    :param dataset: tensorflow dataset wrapper
+    :param sess: tensorflow session
+    :return: single task inference set object
+    """
+    inference_set = single_task_inference_set(task_id=task_id, task_name="unknown")
+    data_stream_op = _build_evaluation_datastream(dataset, sess)
 
-    def score_multitask_model(self, model, dataset, sess):
-        """Evaluate multitask model on dataset.
-        
-        :param model: trained tensorflow model satisfying abstract model interface
-        :param dataset: tf_dataset_wrapper object of dataset on which to evaluate model
-        :param sess: tensorflow session
-        """
-        self._inference_set = multitask_inference_set(total_tasks=TOTAL_DEEPSEA_TASKS)
-        data_stream_op = _build_evaluation_datastream(dataset, sess)
+    for _ in trange(dataset.number_of_examples, desc="single task evaluation progress"):
+        singletask_vp = _convert_example_to_single_task_validation_point(
+                task_id=task_id, model=model, training_example=sess.run(data_stream_op), sess=sess)
+        inference_set.add_validation_point(singletask_vp)
 
-        for _ in trange(dataset.number_of_examples, desc="evaluation_progress"):
-            multitask_vp = _convert_example_to_multitask_validation_point(
-                    model=model, training_example=sess.run(data_stream_op), sess=sess)
-            self._inference_set.add_multitask_validation_point(multitask_vp)
+    return inference_set
 
-        return compute_task_metrics(self._inference_set)
 
-    def score_single_task_model(self, task_id, model, dataset, sess):
-        """Evaluate single task model on dataset.
+def generate_multitask_inference_set(model, dataset, sess):
+    """Return multitask inference set for evaluation.
+     
+    :param model: trained tensorflow model satisfying abstract model interface
+    :param dataset: tensorflow dataset wrapper
+    :param sess: tensorflow session
+    :return: multitask inference set object
+    """
+    inference_set = multitask_inference_set(total_tasks=TOTAL_DEEPSEA_TASKS)
+    data_stream_op = _build_evaluation_datastream(dataset, sess)
 
-        :param task_id: task_id that identifies predictive task
-        :param model: trained tensorflow model satisfying abstract model interface
-        :param dataset: tf_dataset_wrapper object of dataset on which to evaluate model
-        :param sess: tensorflow session
-        """
-        self._inference_set = single_task_inference_set(task_id=task_id, task_name="unknown")
-        data_stream_op = _build_evaluation_datastream(dataset, sess)
+    for _ in trange(dataset.number_of_examples, desc="multitask evaluation progress"):
+        multitask_vp = _convert_example_to_multitask_validation_point(
+                model=model, training_example=sess.run(data_stream_op), sess=sess)
+        inference_set.add_multitask_validation_point(multitask_vp)
 
-        for _ in trange(dataset.number_of_examples, desc="evaluation_progress"):
-            singletask_vp = _convert_example_to_single_task_validation_point(
-                    task_id=task_id, model=model, training_example=sess.run(data_stream_op), sess=sess)
-            self._inference_set.add_validation_point(singletask_vp)
-
-            motif, score = singletask_vp.attention_result.impact_motif_and_score
-            label = singletask_vp.label
-            print "impact_motif: {}, impact_score: {} | label : {}".format(motif, score, label)
-
-        return compute_task_metrics(self._inference_set)
+    return inference_set
 
 
 def _build_evaluation_datastream(dataset, sess):
