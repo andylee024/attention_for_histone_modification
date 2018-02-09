@@ -64,7 +64,7 @@ def _save_task_metrics(task_metrics, path):
     :param path: path for which to save task metrics
     """
     with open(path, 'w') as f:
-        f.write(task_metrics)
+        f.write(str(task_metrics))
 
 
 def _load_model(args, sess):
