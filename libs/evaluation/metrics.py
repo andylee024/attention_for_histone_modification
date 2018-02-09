@@ -2,8 +2,8 @@
 
 import sklearn.metrics
 
-from komorebi.libs.evaluator.inference_set import single_task_inference_set
-from komorebi.libs.evaluator.metric_types import task_metrics, validation_point
+from komorebi.libs.evaluation.inference_set import single_task_inference_set
+from komorebi.libs.evaluation.metric_types import task_metrics, validation_point
 
 
 def compute_task_metrics(inference_set):

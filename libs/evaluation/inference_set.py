@@ -1,4 +1,4 @@
-from komorebi.libs.evaluator.metric_types import multitask_validation_point, validation_point
+from komorebi.libs.evaluation.metric_types import multitask_validation_point, validation_point
 
 class multitask_inference_set(object):
     """Class containing labels and inference quantities used for computing metrics for prediction tasks."""

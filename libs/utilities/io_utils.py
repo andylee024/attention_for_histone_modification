@@ -59,17 +59,16 @@ def remove_directory(directory, logger=None):
         logger.info("\t deleted {}".format(directory))
 
 
-def ensure_directory(path, logger=None):
+def ensure_directory(directory, logger=None):
     """Ensure the existence a directory.
 
-    If the directory does not exist, then create it.
-    If directory already exists, then do nothing.
+    If the directory does not exist, then create it. If directory already exists, then do nothing.
 
     :param path: directory path to ensure
     :param logger: if supplied, then log creation
     """
-    if not os.path.isdir(path):
-        os.mkdir(path)
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
 
         if logger:
             logger.info("\t created {}".format(directory))

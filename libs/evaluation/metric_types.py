@@ -1,7 +1,12 @@
 """Types for computing and storing metrics."""
 
-class attention_interpretation(object):
-    """Attention interpretation information for a single training example."""
+import numpy as np
+
+from komorebi.libs.utilities.constants import INDEX_TO_NUCLEOTIDE_MAP
+
+
+class attention_result(object):
+    """Attention result for a single training example."""
 
     def __init__(self, sequence, context_probabilities):
         """Initialize structure.
@@ -10,24 +15,48 @@ class attention_interpretation(object):
         :param context_probabilities: context probabilities output by attention network for sequence
         """
         self.sequence = sequence
+        self.sequence_string = _convert_sequence_to_string(sequence)
         self.context_probabilities = context_probabilities
+
+    def _get_motif_and_score_from_index(self, index):
+        """Retrieve motif associated with index.
+
+        The index is assumed to be associated with the middle nucleotide base-pair in the 
+        sequence. Note that offsets are hard-coded for the current implementation of attention networks. 
+        """
+        left_offset, right_offset = 6, 7
+        sequence_start = max(0, index - left_offset)
+        sequence_end = min(len(self.sequence_string), index + right_offset)
+
+        motif = self.sequence_string[sequence_start:sequence_end]
+        score = self.context_probabilities[index]
+        return motif, score
+
+    @property
+    def impact_motif_and_score(self):
+        """Return impact motif and associated context probability score.
+        
+        :return: 2-tuple (influence_motif, influence score)
+        """
+        max_index = np.argmax(self.context_probabilities)
+        return self._get_motif_and_score_from_index(max_index)
 
 
 class validation_point(object):
     """Validation point of single example for single task problem."""
 
-    def __init__(self, classification, probability_prediction, label, attention_interpretation_info):
+    def __init__(self, classification, probability_prediction, label, attention_result_instance):
         """Initialize structure.
 
         :param classification: binary classification 
         :param probability_prediction: probability associated with classification
         :param label: ground-truth label
-        :param attention_interpretation_info: information to intrepret attention network
+        :param attention_result_instance: information to intrepret attention network
         """
         self.classification = classification
         self.probability_prediction = probability_prediction
         self.label = label
-        self.attention_interpretation = attention_interpretation_info
+        self.attention_result = attention_result_instance
 
 
 class multitask_validation_point(object):
@@ -129,3 +158,7 @@ class task_metrics(object):
     def total_examples(self):
         return self.positive_examples + self.negative_examples
 
+
+def _convert_sequence_to_string(sequence):
+    """Connvert sequence to string representation."""
+    return "".join([INDEX_TO_NUCLEOTIDE_MAP[s] for s in sequence])
