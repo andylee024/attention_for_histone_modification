@@ -8,3 +8,7 @@ SINGLE_PREDICTION = 1
 
 # numerical index to string nucleotide map 
 INDEX_TO_NUCLEOTIDE_MAP = {0: 'a', 1: 'c', 2: 'g', 3: 't'}
+
+# Offsets for context probability indexing
+SEQUENCE_OFFSET_LEFT = 6
+SEQUENCE_OFFSET_RIGHT = 7

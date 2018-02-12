@@ -78,12 +78,19 @@ def _convert_example_to_single_task_validation_point(task_id, model, training_ex
             feed_dict={model.inputs['sequence']: training_example['sequence'],
                        model.inputs['features']: training_example['annotation']})
 
-    return validation_point(classification=np.ravel(classification),
-                            probability_prediction=np.ravel(probability),
-                            label=np.ravel(single_task_label),
+    # convert to correct dimensions
+    sequence = np.squeeze(training_example['sequence'])
+    context_probabilities = np.squeeze(context_probabilities)
+    probability = probability.item()
+    classification = classification.item()
+    single_task_label = single_task_label.item()
+    
+    return validation_point(classification=classification,
+                            probability_prediction=probability,
+                            label=single_task_label,
                             attention_result_instance=attention_result(
-                                sequence=np.ravel(training_example['sequence']),
-                                context_probabilities=np.ravel(context_probabilities)))
+                                sequence=sequence,
+                                context_probabilities=context_probabilities))
 
 
 def _convert_example_to_multitask_validation_point(model, training_example, sess):
@@ -98,9 +105,9 @@ def _convert_example_to_multitask_validation_point(model, training_example, sess
             feed_dict={model.inputs['sequence']: training_example['sequence'],
                        model.inputs['features']: training_example['annotation']})
     
-    # convert to 1-D arrays
-    probabilities = np.ravel(probabilities)
-    classifications = np.ravel(classification)
+    # convert to correct dimensions 
+    probabilities = np.squeeze(probabilities)
+    classification = np.squeeze(classification)
     labels = np.ravel(training_example['label'])
     
     return multitask_validation_point(

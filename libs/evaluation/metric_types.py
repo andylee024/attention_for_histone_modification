@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from komorebi.libs.utilities.constants import INDEX_TO_NUCLEOTIDE_MAP
+from komorebi.libs.utilities.constants import INDEX_TO_NUCLEOTIDE_MAP, SEQUENCE_OFFSET_LEFT, SEQUENCE_OFFSET_RIGHT
 
 
 class attention_result(object):
@@ -24,9 +24,8 @@ class attention_result(object):
         The index is assumed to be associated with the middle nucleotide base-pair in the 
         sequence. Note that offsets are hard-coded for the current implementation of attention networks. 
         """
-        left_offset, right_offset = 6, 7
-        sequence_start = max(0, index - left_offset)
-        sequence_end = min(len(self.sequence_string), index + right_offset)
+        sequence_start = max(0, index - SEQUENCE_OFFSET_LEFT)
+        sequence_end = min(len(self.sequence_string), index + SEQUENCE_OFFSET_RIGHT)
 
         motif = self.sequence_string[sequence_start:sequence_end]
         score = self.context_probabilities[index]
@@ -160,5 +159,18 @@ class task_metrics(object):
 
 
 def _convert_sequence_to_string(sequence):
-    """Connvert sequence to string representation."""
-    return "".join([INDEX_TO_NUCLEOTIDE_MAP[s] for s in sequence])
+    """Convert one-hot vector representation of sequence to string representation.
+
+    :param sequence: n x 4 array, where each 4-tuple along zeroth dimension encodes a nucleotide
+    :return: length n string representation of sequence 
+    """
+    _validate_one_hot_sequence(sequence)
+    integer_sequence = [np.argmax(one_hot_nucleotide) for one_hot_nucleotide in sequence]
+    return "".join([INDEX_TO_NUCLEOTIDE_MAP[s] for s in integer_sequence])
+
+
+def _validate_one_hot_sequence(sequence):
+    """Validate that one-hot sequence is correctly encoded."""
+    assert sequence.shape == (1000, 4)
+    for one_hot_nucleotide in sequence:
+        assert sum(one_hot_nucleotide) == 1
