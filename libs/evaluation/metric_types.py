@@ -1,9 +1,12 @@
 """Types for computing and storing metrics."""
 
+import collections
 import numpy as np
 
-from komorebi.libs.utilities.constants import INDEX_TO_NUCLEOTIDE_MAP, SEQUENCE_OFFSET_LEFT, SEQUENCE_OFFSET_RIGHT
+import komorebi.libs.utilities.constants as constants
 
+# Struct to containing indexing information
+Trace = collections.namedtuple(typename='trace', field_names=['start', 'end'])
 
 class attention_result(object):
     """Attention result for a single training example."""
@@ -18,17 +21,11 @@ class attention_result(object):
         self.sequence_string = _convert_sequence_to_string(sequence)
         self.context_probabilities = context_probabilities
 
-    def _get_motif_and_score_from_index(self, index):
-        """Retrieve motif associated with index.
-
-        The index is assumed to be associated with the middle nucleotide base-pair in the 
-        sequence. Note that offsets are hard-coded for the current implementation of attention networks. 
-        """
-        sequence_start = max(0, index - SEQUENCE_OFFSET_LEFT)
-        sequence_end = min(len(self.sequence_string), index + SEQUENCE_OFFSET_RIGHT)
-
-        motif = self.sequence_string[sequence_start:sequence_end]
+    def _get_motif_and_score_from_context_index(self, index):
+        """Retrieve motif and scor associated with context index."""
+        trace = convert_context_index_to_sequence_trace(index)
         score = self.context_probabilities[index]
+        motif = self.sequence_string[trace.start:trace.end]
         return motif, score
 
     @property
@@ -38,7 +35,7 @@ class attention_result(object):
         :return: 2-tuple (influence_motif, influence score)
         """
         max_index = np.argmax(self.context_probabilities)
-        return self._get_motif_and_score_from_index(max_index)
+        return self._get_motif_and_score_from_context_index(max_index)
 
 
 class validation_point(object):
@@ -166,7 +163,7 @@ def _convert_sequence_to_string(sequence):
     """
     _validate_one_hot_sequence(sequence)
     integer_sequence = [np.argmax(one_hot_nucleotide) for one_hot_nucleotide in sequence]
-    return "".join([INDEX_TO_NUCLEOTIDE_MAP[s] for s in integer_sequence])
+    return "".join([constants.INDEX_TO_NUCLEOTIDE_MAP[s] for s in integer_sequence])
 
 
 def _validate_one_hot_sequence(sequence):
@@ -174,3 +171,41 @@ def _validate_one_hot_sequence(sequence):
     assert sequence.shape == (1000, 4)
     for one_hot_nucleotide in sequence:
         assert sum(one_hot_nucleotide) == 1
+
+
+def _convert_context_index_to_sequence_trace(context_index):
+    """Get start and end sequence indices corresponding to context index.
+   
+    Note that this function is implementation-specific to the exact parameters of
+    the DANQ model. Eventually, we will replace this function with a principled way of retrieving indices.
+
+    :param context_index: index into one of the original context vectors
+    :return: 2-tuple to index into original subsequence the context index refers to.
+    """
+    sequence_length = constants.DANQ_SEQUENCE_LENGTH # 1000
+    kernel_size = constants.DANQ_CONV1_KERNEL_SIZE # 26
+    pool_size = constants.DANQ_POOL1_STRIDE # 13
+    pool_stride = constants.DANQ_POOL1_STRIDE # 13
+    total_cnn_vectors = (sequence_length - kernel_size) + 1 # 975 (Note this matches (975, 320) output in Conv1 output)
+    
+    # 1-1 mapping of CNN output to corresponding trace
+    # Each trace indexes back into the original sequence
+    cnn_traces = [Trace(start=idx, end=idx+kernel_size) for idx in range(total_cnn_vectors)]
+    
+    # 1-1 mapping of annotation (i.e. context vector) to corresponding trace
+    # Each annotation trace indexes back into a vector of CNN vectors from previous step
+    annotation_starts = np.arange(start=0, stop=total_cnn_vectors, step=pool_size)
+    annotation_ends = annotation_starts + (pool_stride - 1)
+    annotation_index_pairs = zip(annotation_starts, annotation_ends)
+    annotation_traces = [Trace(ai_start, ai_end) for (ai_start, ai_end) in annotation_index_pairs]
+
+    ## retrieve original sequence index
+    ## annotation -> cnn -> original sequence
+    annotation_trace = annotation_traces[context_index]
+    cnn_start_trace = cnn_traces[annotation_trace.start]
+    cnn_end_trace = cnn_traces[annotation_trace.end]
+
+    sequence_start = cnn_start_trace.start
+    sequence_end = cnn_end_trace.end
+    return Trace(start=sequence_start, end=sequence_end)
+
