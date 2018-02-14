@@ -23,7 +23,7 @@ class attention_result(object):
 
     def _get_motif_and_score_from_context_index(self, index):
         """Retrieve motif and scor associated with context index."""
-        trace = convert_context_index_to_sequence_trace(index)
+        trace = _convert_context_index_to_sequence_trace(index)
         score = self.context_probabilities[index]
         motif = self.sequence_string[trace.start:trace.end]
         return motif, score
