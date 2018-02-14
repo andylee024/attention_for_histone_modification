@@ -67,7 +67,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
                                               parallel_calls=self.parallel_calls)
         
         # initialize variables and objects
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(max_to_keep=50)
         writer = tf.summary.FileWriter(self._summary_directory)
         init_op = tf.global_variables_initializer()
         tf.get_variable_scope().reuse_variables()
@@ -87,7 +87,7 @@ class AbstractTensorflowTrainer(AbstractTrainer):
 
                 # checkpoint saving 
                 if (epoch % self.checkpoint_frequency == 0):
-                    saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch, max_to_keep=50)
+                    saver.save(sess=sess, save_path=self.model_checkpoint_path, global_step=epoch)
 
             # save trained model
             _save_trained_model(prediction_signature=model.prediction_signature, 
